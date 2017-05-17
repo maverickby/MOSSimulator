@@ -135,8 +135,8 @@
                 <Button x:Name="buttonStart_Copy" Content="Опрос состояния" HorizontalAlignment="Left" Margin="531,244,0,0" VerticalAlignment="Top" Width="104"/>
                 <Button x:Name="buttonStart_Copy1" Content="Настройки расш. состояния" HorizontalAlignment="Left" Margin="477,273,0,0" VerticalAlignment="Top" Width="158"/>
                 <CheckBox x:Name="checkBoxmTVK1InfExchangeONOFF" Content="Вкл/выкл информац. обмена с модулем" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Checked="checkBoxmTVK1InfExchangeONOFF_Checked"/>
-                <CheckBox x:Name="checkBoxTVK1VIDEO_OUT_EN" Content="Вкл/выкл видеопотока" HorizontalAlignment="Left" Margin="10,55,0,0" VerticalAlignment="Top" Checked="checkBoxTVK1VIDEO_OUT_EN_Checked" Width="149" Unchecked="checkBoxTVK1VIDEO_OUT_EN_Unchecked"/>
-                <CheckBox x:Name="checkBoxTVK1VIDEO_IN_EN" Content="Вкл/выкл приемника видеоинформации" HorizontalAlignment="Left" Margin="10,75,0,0" VerticalAlignment="Top" RenderTransformOrigin="3.972,1.267" Width="256" Checked="checkBoxTVK1VIDEO_IN_EN_Checked" Unchecked="checkBoxTVK1VIDEO_IN_EN_Unchecked"/>
+                <CheckBox x:Name="checkBoxTVK1VIDEO_OUT_EN" Content="Вкл/выкл видеопотока" HorizontalAlignment="Left" Margin="10,74,0,0" VerticalAlignment="Top" Checked="checkBoxTVK1VIDEO_OUT_EN_Checked" Width="149" Unchecked="checkBoxTVK1VIDEO_OUT_EN_Unchecked"/>
+                <CheckBox x:Name="checkBoxTVK1VIDEO_IN_EN" Content="Вкл/выкл приемника видеоинформации" HorizontalAlignment="Left" Margin="10,53,0,0" VerticalAlignment="Top" RenderTransformOrigin="3.972,1.267" Width="256" Checked="checkBoxTVK1VIDEO_IN_EN_Checked" Unchecked="checkBoxTVK1VIDEO_IN_EN_Unchecked"/>
                 <Label x:Name="labelTVK1VIDEO_IN_STATE" Content="Сост. приемн. видеоинформации" HorizontalAlignment="Left" Margin="281,5,0,0" VerticalAlignment="Top" Width="208"/>
                 <Label x:Name="labelTVK1VIDEO_OUT_STATE_IN" Content="Сост. передатч. видеоинформации " HorizontalAlignment="Left" Margin="281,30,0,0" VerticalAlignment="Top" Width="208"/>
                 <TextBox x:Name="textBoxTVK1VIDEO_IN_STATE" HorizontalAlignment="Left" Height="23" Margin="489,7,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="147"/>
@@ -146,6 +146,8 @@
                 <Button x:Name="buttonZoomRight" Content="+" HorizontalAlignment="Left" Margin="292,110,0,0" VerticalAlignment="Top" Width="22" RenderTransformOrigin="0.227,0.05" PreviewMouseLeftButtonUp="buttonZoomRight_PreviewMouseLeftButtonUp" PreviewMouseLeftButtonDown="buttonZoomRight_PreviewMouseLeftButtonDown" ClickMode="Press"/>
                 <Button x:Name="buttonFocusRight" Content="+" HorizontalAlignment="Left" Margin="292,163,0,0" VerticalAlignment="Top" Width="22" RenderTransformOrigin="0.227,0.05" PreviewMouseLeftButtonUp="buttonFocusRight_PreviewMouseLeftButtonUp" PreviewMouseLeftButtonDown="buttonFocusRight_PreviewMouseLeftButtonDown"/>
                 <CheckBox x:Name="checkBoxTVK1RESET" Content="Сброс" HorizontalAlignment="Left" Margin="149,32,0,0" VerticalAlignment="Top" RenderTransformOrigin="3.972,1.267" Checked="checkBoxTVK1RESET_Checked" Unchecked="checkBoxTVK1RESET_Unchecked"/>
+                <xctk:DoubleUpDown x:Name="numTVK1ZoomTeleVariableP" Margin="590,110,0,0" Value="4" Text="" Maximum="7" Minimum="0" HorizontalAlignment="Left" Width="41" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" DefaultValue="1" ValueChanged="numTVK1ZoomTeleVariableP_ValueChanged"/>
+                <Label x:Name="labelTVK1ZoomTeleVariableP" Content="Коэффициент Tele/Wide (variable) p:" HorizontalAlignment="Left" Margin="369,106,0,0" VerticalAlignment="Top" Width="208"/>
             </Grid>
         </GroupBox>
         <GroupBox x:Name="groupBoxTVK2" Header="ТВК 2" HorizontalAlignment="Left" Margin="1339,40,0,0" Grid.Row="1" VerticalAlignment="Top" Height="486" Width="565">
@@ -223,7 +225,7 @@
                 <RadioButton x:Name="radioButton_Copy9" Content="Горячий черный" HorizontalAlignment="Left" Margin="732,61,0,0" VerticalAlignment="Top"/>
                 <CheckBox x:Name="chbCycleMode_Copy" Content="Марка вкл/выкл" HorizontalAlignment="Left" Margin="9,198,0,0" VerticalAlignment="Top" IsChecked="True" Width="152"/>
                 <CheckBox x:Name="chbCycleMode_Copy1" Content="Автокалибровка" HorizontalAlignment="Left" Margin="202,198,0,0" VerticalAlignment="Top" IsChecked="True" Width="152"/>
-                <Button x:Name="buttonStart_Copy6" Content="Выполнить кавтокалибровку" HorizontalAlignment="Left" Margin="340,197,0,0" VerticalAlignment="Top" Width="176" Click="buttonStart_Click"/>
+                <Button x:Name="buttonStart_Copy6" Content="Выполнить автокалибровку" HorizontalAlignment="Left" Margin="340,197,0,0" VerticalAlignment="Top" Width="176" Click="buttonStart_Click"/>
                 <CheckBox x:Name="chbCycleMode_Copy2" Content="Автоэкспозиция" HorizontalAlignment="Left" Margin="10,240,0,0" VerticalAlignment="Top" IsChecked="True" Width="152"/>
                 <Slider x:Name="sliderAZ_Copy8" HorizontalAlignment="Left" Margin="106,264,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="163" ValueChanged="sliderAZ_ValueChanged" TouchLeave="sliderAZ_TouchLeave" SmallChange="1" AutoToolTipPlacement="TopLeft" Maximum="55" LargeChange="0.1"/>
                 <xctk:DoubleUpDown x:Name="numAZ_Copy8" Margin="198,288,0,0" Value="30" Increment="0.1" Text="0" ValueChanged="numAZ_ValueChanged" Maximum="55" Minimum="0" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top"/>

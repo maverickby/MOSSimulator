@@ -91,10 +91,12 @@ namespace MOSSimulator
         const int TVK1_PACKET_SIZE_OUT = 24;
         double AZSpeed, ELSpeed;//хранение значений скоростей наведения при управлении джойстиком, значение в диапазоне 0..1
         int joystickZoneInsensibilityX, joystickZoneInsensibilityY;
-        bool camZoomTeleSend;
-        bool camZoomWideSend;
+        bool camZoomTeleVariableSend;
+        bool camZoomWideVariableSend;
         bool camZoomStopSend;
         bool camZoomDirectSend;
+        //bool camZoomTeleVariableSend;
+        //bool camZoomWideVariableSend;
         bool camFocusFarSend;
         bool camFocusNearSend;
         bool camFocusStopSend;
@@ -199,8 +201,8 @@ namespace MOSSimulator
             gearMode = GearMode.OFF;
             NumJoystickK = 1;
             JoystickZoneInsensibilityX = JoystickZoneInsensibilityY = 1000;
-            camZoomTeleSend = false;
-            camZoomWideSend = false;
+            camZoomTeleVariableSend = false;
+            camZoomWideVariableSend = false;
             camZoomStopSend = false;
             camZoomDirectSend = false;
             camFocusFarSend = false;
@@ -763,7 +765,7 @@ namespace MOSSimulator
                     str_err += "Превышение температуры привода тангажа\r\n";
                 }
 
-                tbErrors.Text = str_err;
+                //tbErrors.Text = str_err;
 
                 ShowBuf(com_in.GetBufToSend(), false);
 
@@ -1793,8 +1795,8 @@ namespace MOSSimulator
             camFocusDirectSend = false;
             camAutoFocusSend = true;
 
-            camZoomTeleSend = false;
-            camZoomWideSend = false;
+            camZoomTeleVariableSend = false;
+            camZoomWideVariableSend = false;
             camZoomStopSend = false;
             camZoomDirectSend = false;
             TVK1DataChanged = true;
@@ -1825,8 +1827,8 @@ namespace MOSSimulator
         private void numTVK1Zoom_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
             sliderTVK1Zoom.Value = (int)numTVK1Zoom.Value;
-            camZoomTeleSend = false;
-            camZoomWideSend = false;
+            camZoomTeleVariableSend = false;
+            camZoomWideVariableSend = false;
             camZoomStopSend = false;
             camZoomDirectSend = true;
 
@@ -1849,8 +1851,8 @@ namespace MOSSimulator
             camFocusDirectSend = true;
             camAutoFocusSend = false;
 
-            camZoomTeleSend = false;
-            camZoomWideSend = false;
+            camZoomTeleVariableSend = false;
+            camZoomWideVariableSend = false;
             camZoomStopSend = false;
             camZoomDirectSend = false;
             TVK1DataChanged = true;
@@ -1912,8 +1914,8 @@ namespace MOSSimulator
 
         private void buttonZoomLeft_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            camZoomTeleSend = false;
-            camZoomWideSend = false;
+            camZoomTeleVariableSend = false;
+            camZoomWideVariableSend = false;
             camZoomStopSend = true;
             camZoomDirectSend = false;
 
@@ -1929,8 +1931,8 @@ namespace MOSSimulator
 
         private void buttonZoomRight_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            camZoomTeleSend = false;
-            camZoomWideSend = false;
+            camZoomTeleVariableSend = false;
+            camZoomWideVariableSend = false;
             camZoomStopSend = true;
             camZoomDirectSend = false;
 
@@ -1951,8 +1953,8 @@ namespace MOSSimulator
             camFocusDirectSend = false;
             camAutoFocusSend = false;
 
-            camZoomTeleSend = false;
-            camZoomWideSend = false;
+            camZoomTeleVariableSend = false;
+            camZoomWideVariableSend = false;
             camZoomStopSend = false;
             camZoomDirectSend = false;
 
@@ -1968,8 +1970,8 @@ namespace MOSSimulator
 
         private void buttonZoomRight_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            camZoomTeleSend = true;
-            camZoomWideSend = false;
+            camZoomTeleVariableSend = true;
+            camZoomWideVariableSend = false;
             camZoomStopSend = false;
             camZoomDirectSend = false;
 
@@ -1985,8 +1987,8 @@ namespace MOSSimulator
 
         private void buttonZoomLeft_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            camZoomTeleSend = false;
-            camZoomWideSend = true;
+            camZoomTeleVariableSend = false;
+            camZoomWideVariableSend = true;
             camZoomStopSend = false;
             camZoomDirectSend = false;
 
@@ -2004,8 +2006,8 @@ namespace MOSSimulator
         {
             if (numTVK1Zoom != null)
                 numTVK1Zoom.Value = (int)sliderTVK1Zoom.Value;
-            camZoomTeleSend = false;
-            camZoomWideSend = false;
+            camZoomTeleVariableSend = false;
+            camZoomWideVariableSend = false;
             camZoomStopSend = false;
             camZoomDirectSend = true;
 
@@ -2038,8 +2040,8 @@ namespace MOSSimulator
             camFocusDirectSend = false;
             camAutoFocusSend = false;
 
-            camZoomTeleSend = false;
-            camZoomWideSend = false;
+            camZoomTeleVariableSend = false;
+            camZoomWideVariableSend = false;
             camZoomStopSend = false;
             camZoomDirectSend = false;
 
@@ -2055,8 +2057,8 @@ namespace MOSSimulator
             camFocusDirectSend = false;
             camAutoFocusSend = false;
 
-            camZoomTeleSend = false;
-            camZoomWideSend = false;
+            camZoomTeleVariableSend = false;
+            camZoomWideVariableSend = false;
             camZoomStopSend = false;
             camZoomDirectSend = false;
             TVK1DataChanged = true;
@@ -2073,8 +2075,8 @@ namespace MOSSimulator
             camFocusDirectSend = true;
             camAutoFocusSend = false;            
 
-            camZoomTeleSend = false;
-            camZoomWideSend = false;
+            camZoomTeleVariableSend = false;
+            camZoomWideVariableSend = false;
             camZoomStopSend = false;
             camZoomDirectSend = false;
 
@@ -2096,8 +2098,8 @@ namespace MOSSimulator
             camFocusDirectSend = false;
             camAutoFocusSend = true;
 
-            camZoomTeleSend = false;
-            camZoomWideSend = false;
+            camZoomTeleVariableSend = false;
+            camZoomWideVariableSend = false;
             camZoomStopSend = false;
             camZoomDirectSend = false;
             TVK1DataChanged = true;
@@ -2116,6 +2118,11 @@ namespace MOSSimulator
             ControlChanged(sender, e);
         }
 
+        private void numTVK1ZoomTeleVariableP_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            ControlChanged(sender, e);
+        }
+
         private void buttonFocusRight_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             camFocusFarSend = false;
@@ -2124,8 +2131,8 @@ namespace MOSSimulator
             camFocusDirectSend = false;
             camAutoFocusSend = false;
 
-            camZoomTeleSend = false;
-            camZoomWideSend = false;
+            camZoomTeleVariableSend = false;
+            camZoomWideVariableSend = false;
             camZoomStopSend = false;
             camZoomDirectSend = false;
             TVK1DataChanged = true;
@@ -2280,7 +2287,7 @@ namespace MOSSimulator
                     Cin = 0;
 
                 ////Управляющий байт блока управления камерой (байт 0)
-                //if (!camZoomTeleSend && !camZoomWideSend && !camZoomStopSend &&
+                //if (!camZoomTeleVariableSend && !camZoomWideVariableSend && !camZoomStopSend &&
                 //    !camFocusFarSend && !camFocusNearSend && !camFocusStopSend)
                 {
                     BitArray bitArray = new BitArray(8);
@@ -2330,7 +2337,7 @@ namespace MOSSimulator
                     comTVK1.DATA[0] = ConvertToByte(bitArray);//Управляющий байт
                 }
 
-                if (camZoomTeleSend)
+                if (camZoomTeleVariableSend)
                 {
                     if(TVK1DataChanged)
                         comTVK1.DATA[1] = ++Cin;
@@ -2338,11 +2345,33 @@ namespace MOSSimulator
                     comTVK1.DATA[3] = 0x01;
                     comTVK1.DATA[4] = 0x04;
                     comTVK1.DATA[5] = 0x07;
-                    comTVK1.DATA[6] = 0x02;
+
+                    //get p 4 bits value
+                    byte iValZoomTeleVariableP = (byte)numTVK1ZoomTeleVariableP.Value;
+                    byte[] myBytes = new byte[1];
+                    myBytes[0] = iValZoomTeleVariableP;
+                    BitArray bitArrayZoom = new BitArray(myBytes);
+                    BitArray byte0 = new BitArray(8);
+                    //set p
+                    byte0.Set(0, bitArrayZoom.Get(0));
+                    byte0.Set(1, bitArrayZoom.Get(1));
+                    byte0.Set(2, bitArrayZoom.Get(2));
+                    byte0.Set(3, bitArrayZoom.Get(3));
+                    //set 2
+                    byte0.Set(4, false);
+                    byte0.Set(5, true);
+                    byte0.Set(6, false);
+                    byte0.Set(7, false);
+
+                    byte byteRes0 = ConvertToByte(byte0);                    
+
+                    comTVK1.DATA[6] = byteRes0;
+
+                    //comTVK1.DATA[6] = 0x02;
                     comTVK1.DATA[7] = 0xFF;
                     TVK1DataChanged = false;
                 }
-                if (camZoomWideSend)
+                if (camZoomWideVariableSend)
                 {
                     if (TVK1DataChanged)
                         comTVK1.DATA[1] = ++Cin;
@@ -2350,7 +2379,27 @@ namespace MOSSimulator
                     comTVK1.DATA[3] = 0x01;
                     comTVK1.DATA[4] = 0x04;
                     comTVK1.DATA[5] = 0x07;
-                    comTVK1.DATA[6] = 0x03;
+                    //get p 4 bits value
+                    byte iValZoomTeleVariableP = (byte)numTVK1ZoomTeleVariableP.Value;
+                    byte[] myBytes = new byte[1];
+                    myBytes[0] = iValZoomTeleVariableP;
+                    BitArray bitArrayZoom = new BitArray(myBytes);
+                    BitArray byte0 = new BitArray(8);                    
+                    //set p
+                    byte0.Set(0, bitArrayZoom.Get(0));
+                    byte0.Set(1, bitArrayZoom.Get(1));
+                    byte0.Set(2, bitArrayZoom.Get(2));
+                    byte0.Set(3, bitArrayZoom.Get(3));
+                    //set 3
+                    byte0.Set(4, true);
+                    byte0.Set(5, true);
+                    byte0.Set(6, false);
+                    byte0.Set(7, false);
+
+                    byte byteRes0 = ConvertToByte(byte0);
+
+                    comTVK1.DATA[6] = byteRes0;
+                    //comTVK1.DATA[6] = 0x03;
                     comTVK1.DATA[7] = 0xFF;                    
                     TVK1DataChanged = false;
                 }
