@@ -146,7 +146,7 @@ namespace MOSSimulator
             frmLog = new Log();
             tmrExchange = new Multimedia.Timer(this.components);
             tmrExchange.Mode = Multimedia.TimerMode.OneShot;
-            tmrExchange.Period = 10;
+            tmrExchange.Period = 1;
             tmrExchange.Resolution = 0;
             tmrExchange.SynchronizingObject = null;
             tmrExchange.Tick += new System.EventHandler(this.tmrExchange_Tick);
@@ -421,20 +421,20 @@ namespace MOSSimulator
                     if (uart.Open())
                     {
                         cntStartErrors = 0; cntTimeOuts = 0; cntChkSums = 0; numOfPocket = 0; cntSuccess = 0;
-                        uart.received += uart_received;
+                        uart.received += uart_received;//подписка на событие приема received из класса UART
                         uart.showBufferWasSent += uart_bufferSent;
                         cbComPorts.IsEnabled = false;
                         buttonStart.Content = "Стоп";
                         buttonStart.Background = Brushes.LightGreen;
                         if ((bool)chbCycleMode.IsChecked)
                         {
-                            tmrExchange.Period = 10;
+                            tmrExchange.Period = 1;
                             tmrExchange.Mode = Multimedia.TimerMode.Periodic;
                             tmrExchange.Start();
                         }
                         else
                         {
-                            tmrExchange.Period = 10;
+                            tmrExchange.Period = 1;
                             tmrExchange.Mode = Multimedia.TimerMode.OneShot;
                             tmrExchange.Start();
                         }                        
@@ -458,7 +458,7 @@ namespace MOSSimulator
                     buttonStart.Content = "Стоп";
                     buttonStart.Background = Brushes.LightGreen;
 
-                    tmrExchange.Period = 10;
+                    tmrExchange.Period = 1;
                     tmrExchange.Mode = Multimedia.TimerMode.OneShot;
                     tmrExchange.Start();                    
                 }
@@ -500,8 +500,8 @@ namespace MOSSimulator
         //чтение данных из порта
         void uart_received(Cmd com_in)
         {
-            Dispatcher.BeginInvoke(new Action(delegate
-            {
+            //Dispatcher.BeginInvoke(new Action(delegate
+            //{       //выкинул BeginInvoke т.к. прием не по таймеру, а по возбуждению события received в Uart
                 switch (com_in.result)
                 {
                     case CmdResult.TIMEOUT:
@@ -533,7 +533,10 @@ namespace MOSSimulator
                 lblErrorChkSums.Content = String.Format("Ошибки контр. суммы - {0}", cntChkSums.ToString());
                 lblTimeOuts.Content = String.Format("Превыш. времени ожидания - {0}", cntTimeOuts.ToString());
 
-                //режим работы привода азимута
+            //МУ ГСП
+            //режим работы привода азимута
+            if (cycleIndex == 0 || cycleIndex == 2 || cycleIndex == 4 || cycleIndex == 6)
+            {
                 int index = com_in.DATA[0];
 
                 switch ((int)com_in.DATA[0])
@@ -558,7 +561,7 @@ namespace MOSSimulator
                         break;
                     case 0x80:
                         tbModeAZ.Text = GearModeInStr[6];
-                        break;                    
+                        break;
                 }
 
                 //режим работы привода тангажа
@@ -628,7 +631,7 @@ namespace MOSSimulator
 
                     val = -(BitConverter.ToInt32(byteArr, 0) + 1);
                     val = (int)(val * koeff_lsb_speed);
-                    tbAZAngle2.Text= val.ToString();
+                    tbAZAngle2.Text = val.ToString();
                 }
                 else
                 {
@@ -643,10 +646,10 @@ namespace MOSSimulator
                 byteArr[0] = com_in.DATA[5];
                 byteArr[1] = com_in.DATA[6];
                 byteArr[2] = com_in.DATA[7];
-                byteArr[3] = 0x00;               
+                byteArr[3] = 0x00;
 
                 if ((byteArr[2] & 1 << 7) != 0)//отрицательное число
-                {                    
+                {
                     byteArr[2] ^= 1 << 7;//установить бит 7 в 0
 
                     byteArr[2] ^= 1 << 0;
@@ -696,16 +699,16 @@ namespace MOSSimulator
                 string str_err = "";
 
                 byte errByte = com_in.DATA[8];
-                if ((errByte & 1 << 0) != 0 )
+                if ((errByte & 1 << 0) != 0)
                 {
                     str_err += "Ошибка датчика гироскопического азимута\r\n";
                 }
- 
+
                 if ((errByte & 1 << 1) != 0)
                 {
                     str_err += "Ошибка датчика гироскопического тангажа\r\n";
                 }
-  
+
                 if ((errByte & 1 << 2) != 0)
                 {
                     str_err += "Ошибка датчика угла азимута\r\n";
@@ -765,13 +768,35 @@ namespace MOSSimulator
                     str_err += "Превышение температуры привода тангажа\r\n";
                 }
 
-                //tbErrors.Text = str_err;
+                tbErrors.Text = str_err;
 
                 ShowBuf(com_in.GetBufToSend(), false);
+            }
+            //END МУ ГСП
 
-                if ((bool)chbCycleMode.IsChecked)
+            //ТВК 1
+            if (cycleIndex == 1)
+            {
+            }
+            //ТВК 2
+            if (cycleIndex == 3)
+            {
+            }
+            //ТПВК
+            if (cycleIndex == 5)
+            {
+            }
+            //ЛД
+            if (cycleIndex == 7)
+            {
+            }
+
+            if ((bool)chbCycleMode.IsChecked)
                     tmrExchange.Start();
-            }));
+            //}));
+
+            //now SEND COMMAND immediately ! (not using tmrExchange)
+            InitSendCommand();
         }
 
         public void ControlChanged(object sender, EventArgs e)
@@ -1053,7 +1078,7 @@ namespace MOSSimulator
 
         private void comboBoxLDCommands_DropDownClosed(object sender, EventArgs e)
         {
-            ControlChanged(sender, e);
+            //ControlChanged(sender, e);
         }
 
         private void radioButtonLDRegimVARUOnStart_Checked(object sender, RoutedEventArgs e)
@@ -2142,6 +2167,7 @@ namespace MOSSimulator
 
         private void tmrExchange_Tick(object sender, EventArgs e)
         {
+            //return;//not use tmrExchange for send commands now on the tmrExchange tick since we are using uart.receive event
             if (!Dispatcher.CheckAccess())
             {
                 //BeginInvoke(new delInitSendCommand(StartTimer));
@@ -2617,6 +2643,8 @@ namespace MOSSimulator
             //ТВК2
             if ((bool)checkBoxmTVK2InfExchangeONOFF.IsChecked && arrayCycleDeviceOrder[cycleIndex] == 2)
             {
+                byte[] byteArray;
+                BitArray bitArray = new BitArray(8);
                 byte[] buf_chksum_header = new byte[4];
                 byte[] buf_chksum_all = new byte[28];//полная длина пакета 30 - 2 байта (длина чексуммы 2)
 
@@ -2632,9 +2660,8 @@ namespace MOSSimulator
                 buf_chksum_header[3] = comTVK2.LENGTH[1];
 
                 ushort chksm = (ushort)CheckSumRFC1071(buf_chksum_header, 4);
-                comTVK2.CHECKSUM1 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_header, 4));
+                comTVK2.CHECKSUM1 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_header, 4));                
                 
-                BitArray bitArray = new BitArray(8);
                 bitArray.SetAll(false);
 
                 if (st_outTVK2.POWER)
@@ -2687,20 +2714,64 @@ namespace MOSSimulator
 
                 comTVK2.DATA[0] = ConvertToByte(bitArray);
 
-                byte[] byteArray = BitConverter.GetBytes(st_outTVK2.CONTRAST_GAIN);
+                byteArray = BitConverter.GetBytes(st_outTVK2.CONTRAST_GAIN);
                 comTVK2.DATA[1] = byteArray[0];
                 comTVK2.DATA[2] = byteArray[1];
 
                 byteArray = BitConverter.GetBytes(st_outTVK2.CONTRAST_OFFSET);
                 comTVK2.DATA[3] = byteArray[0];
-                comTVK2.DATA[4] = byteArray[1];
-                
-                comTVK2.DATA[5] = 0;
-                comTVK2.DATA[6] = 0;
-                comTVK2.DATA[7] = 0;
-                comTVK2.DATA[8] = 0;
-                comTVK2.DATA[9] = 0;
-                comTVK2.DATA[10] = 0;
+                comTVK2.DATA[4] = byteArray[1];                
+
+                if (st_outTVK2.CAPTURE_MODE == 0)
+                {
+                    UInt16 val = 0x0591;
+                    byteArray = BitConverter.GetBytes(val);
+                    comTVK2.DATA[5] = byteArray[0];
+                    comTVK2.DATA[6] = byteArray[1];                    
+                    comTVK2.DATA[7] = byteArray[0];
+                    comTVK2.DATA[8] = byteArray[1];
+
+                    bitArray.SetAll(false);
+                    bitArray.Set(3, true);//115 регистр = 0х0008
+                    bitArray.Set(4, true);//116 регистр = 03
+                    bitArray.Set(5, true);//116 регистр = 03
+
+                    comTVK2.DATA[9] = ConvertToByte(bitArray);
+
+                    val = 0x00e6;//116 регистр = e6
+                    byteArray = BitConverter.GetBytes(val);
+                    comTVK2.DATA[10] = byteArray[0];
+
+                    val = 0x6040;
+                    byteArray = BitConverter.GetBytes(val);
+                    comTVK2.DATA[20] = byteArray[0];
+                    comTVK2.DATA[21] = byteArray[1];                    
+                }
+                if (st_outTVK2.CAPTURE_MODE == 1)
+                {
+                    UInt16 val = 0x0776;
+                    byteArray = BitConverter.GetBytes(val);
+                    comTVK2.DATA[5] = byteArray[0];
+                    comTVK2.DATA[6] = byteArray[1];
+                    comTVK2.DATA[7] = byteArray[0];
+                    comTVK2.DATA[8] = byteArray[1];
+
+                    bitArray.SetAll(false);
+                    bitArray.Set(0, true);//115 регистр = 0х0000
+                    bitArray.Set(4, true);//116 регистр = 03
+                    bitArray.Set(5, true);//116 регистр = 03
+
+                    comTVK2.DATA[9] = ConvertToByte(bitArray);
+
+                    val = 0x00e6;//116 регистр = e6
+                    byteArray = BitConverter.GetBytes(val);
+                    comTVK2.DATA[10] = byteArray[0];
+
+                    val = 0x6040;
+                    byteArray = BitConverter.GetBytes(val);
+                    comTVK2.DATA[20] = byteArray[0];
+                    comTVK2.DATA[21] = byteArray[1];                    
+                }
 
                 byte[] byteArrayEXPOSURE = BitConverter.GetBytes(st_outTVK2.EXPOSURE);
                 comTVK2.DATA[11] = byteArrayEXPOSURE[0];
@@ -2715,8 +2786,6 @@ namespace MOSSimulator
                 comTVK2.DATA[18] = byteArrayHDR_EXPOSURE2[1];
                 comTVK2.DATA[19] = byteArrayHDR_EXPOSURE2[2];
 
-                comTVK2.DATA[20] = 0;
-                comTVK2.DATA[21] = 0;
 
                 buf_chksum_all[0] = comTVK2.START;
                 buf_chksum_all[1] = comTVK2.ADDRESS;

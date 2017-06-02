@@ -13,7 +13,7 @@ namespace MOSSimulator
     /// <summary>
     /// Делегат, указывающий на функцию для обработки сообщения из UART
     /// </summary>
-    public delegate void RcvdMsg(Cmd com);
+    public delegate void RcvdMsg(Cmd com);//объявление делегата
 
     public delegate void ByteBufDelegate(byte[] buf);
     //enum STATE_RX { START, HEADER, DATALENGTH, DATA, CHKSUM }; //состояние приема
@@ -36,7 +36,7 @@ namespace MOSSimulator
         /// <summary>
         /// Событие, срабатывает при окончании приема пакета, возникновении ошибки во время приема или таймаута
         /// </summary>
-        public event RcvdMsg received;
+        public event RcvdMsg received;//объявление события
 
         /// <summary>
         /// Событие, возвращающее отправляемый буфер при его непосредственной отправке в порт
@@ -51,7 +51,9 @@ namespace MOSSimulator
             uart.StopBits = System.IO.Ports.StopBits.One;
             uart.Parity = System.IO.Ports.Parity.None;
             uart.BaudRate = 921600;
-            
+            uart.DataReceived += DataReceived;//подписка на событие приема из SerialPort
+
+
             //command_in = new ReceivedCommand(1);
 
             timer = new Multimedia.Timer();
@@ -153,9 +155,121 @@ namespace MOSSimulator
             set { uart.WriteBufferSize = value; }
         }
 
+        void DataReceived(object sender, SerialDataReceivedEventArgs e)
+        {
+            if (state_rx == STATE_RX.START)
+            {
+                if (uart.BytesToRead >= 1)
+                {
+                    command_in.START = (byte)uart.ReadByte();
+                    if (command_in.START == 0x5a)
+                        state_rx = STATE_RX.ADDRESS;
+                    else
+                    {
+                        //неправильный стартовый байт
+                        command_in.result = CmdResult.BAD_START_BYTE;
+                        timer.Stop();
+                        uart.DiscardInBuffer();
+                        //вызов метода uart_received(Cmd com_in) в MainWindow через делегат RcvdMsg для отображения информации
+                        received(command_in);
+                    }
+                }
+            }
+            if (state_rx == STATE_RX.ADDRESS)
+            {
+                if (uart.BytesToRead >= 1)
+                {
+                    command_in.ADDRESS = (byte)uart.ReadByte();
+
+                    state_rx = STATE_RX.DATALENGTH;
+                }
+            }
+            if (state_rx == STATE_RX.DATALENGTH)
+            {
+                if (uart.BytesToRead >= 2)
+                {
+                    for (int i = 0; i < 2/*command_in.LENGTH.Length*2*/; i++)
+                        command_in.LENGTH[i] = (byte)uart.ReadByte();
+
+                    state_rx = STATE_RX.CHKSUM1;
+                }
+            }
+            if (state_rx == STATE_RX.CHKSUM1)
+            {
+                if (uart.BytesToRead >= 2)
+                {
+                    byte[] checksum1Arr = new byte[2];
+                    checksum1Arr[0] = (byte)uart.ReadByte();
+                    checksum1Arr[1] = (byte)uart.ReadByte();
+
+                    command_in.CHECKSUM1 = BitConverter.ToUInt16(checksum1Arr, 0);
+
+                    byte[] b = command_in.GetBufToSend();
+
+                    if (checksum1Arr[0] != b[4] || checksum1Arr[1] != b[5])
+                    {
+                        command_in.result = CmdResult.BAD_CHKSUM1;
+                    }
+                    else
+                    {
+                        state_rx = STATE_RX.DATA;
+                    }
+
+                    //timer.Stop();
+                    //uart.DiscardInBuffer();
+                    //received(command_in);
+                }
+            }
+            if (state_rx == STATE_RX.DATA)
+            {
+                if (uart.BytesToRead >= command_in.DATA.Length)
+                {
+                    for (int i = 0; i < 12/*command_in.DATA.Length*/; i++)//должно быть 10 байт, а не 12 ? длина пакета данных 10 байт для ГСП
+                        command_in.DATA[i] = (byte)uart.ReadByte();
+                    state_rx = STATE_RX.CHKSUM2;
+                }
+            }
+            if (state_rx == STATE_RX.CHKSUM2)
+            {
+                if (uart.BytesToRead >= 2)
+                {
+                    byte[] checksum2Arr = new byte[2];
+                    checksum2Arr[0] = (byte)uart.ReadByte();
+                    checksum2Arr[1] = (byte)uart.ReadByte();
+
+                    command_in.CHECKSUM2 = BitConverter.ToUInt16(checksum2Arr, 0);
+
+                    byte[] b = command_in.GetBufToSend();
+
+                    if (checksum2Arr[0] != b[GSP_PACKET_SIZE - 2] || checksum2Arr[1] != b[GSP_PACKET_SIZE - 1])
+                    {
+                        command_in.result = CmdResult.BAD_CHKSUM2;
+                    }
+                    else
+                    {
+                        command_in.result = CmdResult.SUCCESS;
+                    }
+
+                    timer.Stop();
+                    uart.DiscardInBuffer();
+                    received(command_in);//Возбуждаем событие received и передаем ему данные, прием в MainWindow.uart_received() 
+                }
+            }
+            if (time <= 0)
+            {
+                command_in.result = CmdResult.TIMEOUT;
+                timer.Stop();
+                uart.DiscardInBuffer();
+                received(command_in);//Возбуждаем событие received и передаем ему данные, прием в MainWindow.uart_received()
+            }
+            time -= (uint)timer.Period;
+            return;
+        }
+
         //прием данных по тику таймера обмена 2 мс
         void timer_Tick(object sender, EventArgs e)
         {
+            return;//not use data receive/processing on the timer tick since we are using uart.receive event
             if (!active)
             {
                 timer.Stop();
