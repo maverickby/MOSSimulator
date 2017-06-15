@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+/*структуры, используются для ПОСЫЛКИ команд*/
 namespace MOSSimulator
 {
     class StructureCommand
@@ -54,6 +55,7 @@ namespace MOSSimulator
         }
     }
 
+    /*структуры ЛД, используется для ПОСЫЛКИ команд*/
     class StructureCommandLD
     {
         public byte START;
@@ -164,8 +166,8 @@ namespace MOSSimulator
         public bool VIDEO_OUT_EN;
         //public byte[] DATA_CAMERA;
 
-        const int TVK2_DATA_SIZE = 16;
-        const int TVK2_PACKET_SIZE = 24;
+        const int TVK1_DATA_SIZE = 18;
+        const int TVK1_PACKET_SIZE = 26;
 
         public StructureCommandTVK1()
         {
@@ -174,7 +176,7 @@ namespace MOSSimulator
             LENGTH = new byte[2];
             EVEN = false;
             CHECKSUM1 = 0;
-            DATA = new byte[TVK2_DATA_SIZE];
+            DATA = new byte[TVK1_DATA_SIZE];
             CHECKSUM2 = 0;
 
             POWER = false;
@@ -183,4 +185,45 @@ namespace MOSSimulator
             VIDEO_OUT_EN = false;
         }
     }
+
+    class StructureCommandTPVK
+    {
+        public byte START;
+        public byte ADDRESS;
+        public byte[] LENGTH;
+        public bool EVEN;
+        public ushort CHECKSUM1;
+        public byte[] DATA;
+        public ushort CHECKSUM2;
+
+        public bool POWER;
+
+        public byte START_CODE;
+        public byte MODE_POLARITY__AUTO_CALIBRATION;
+        public byte IMAGE_POSITION_LAYING_MARK_DIGITAL_ZOOM_AUTO_EXPOSURE;
+        public ushort LEVEL;
+        public ushort GAIN;
+        public byte EXPOSURE;
+        public byte FOCUS;
+        public byte ZOOM;
+        public byte ENHANCE;
+        public ushort CS;
+
+        const int TPVK_DATA_SIZE = 13;
+        const int TPVK_PACKET_SIZE = 21;
+
+        public StructureCommandTPVK()
+        {
+            START = 0x5a;
+            ADDRESS = 12;
+            LENGTH = new byte[2];
+            EVEN = false;
+            CHECKSUM1 = 0;
+            DATA = new byte[TPVK_DATA_SIZE];
+            CHECKSUM2 = 0;
+
+            POWER = false;
+        }
+    }
+
 }

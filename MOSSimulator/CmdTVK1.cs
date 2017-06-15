@@ -35,7 +35,7 @@ namespace MOSSimulator
             LENGTH = new byte[2];
             EVEN = false;
             CHECKSUM1 = 0;
-            DATA = new byte[TVK1_DATA_SIZE + 2];//должно быть 18 байт, а не 20 ? длина пакета данных 18 байт для ТВК1
+            DATA = new byte[TVK1_DATA_SIZE];//длина пакета данных 18 байт для ТВК1
             for (int i = 0; i < DATA.Length; i++)
                 DATA[i] = 0;
 
@@ -49,7 +49,7 @@ namespace MOSSimulator
         /// <summary>
         /// Собирает все данные команды в один буфер, считает chksum.
         /// </summary>
-        /// <returns>Возвращает собранный буфер (18 байт)</returns>
+        /// <returns>Возвращает собранный буфер (26 байт)</returns>
         public override byte[] GetBufToSend()
         {
             //ushort checksum1=0;

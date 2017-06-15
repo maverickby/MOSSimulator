@@ -46,7 +46,7 @@
             this.ClientSize = new System.Drawing.Size(613, 345);
             this.Controls.Add(this.listBoxLog);
             this.Name = "Log";
-            this.Text = "Log";
+            this.TopMost = true;
             this.ResumeLayout(false);
 
         }

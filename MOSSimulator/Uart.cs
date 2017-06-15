@@ -7,6 +7,8 @@ using System.IO.Ports;
 using Multimedia;
 using System.Windows.Controls;
 using System.Windows.Forms;
+using System.IO;
+using System.Diagnostics;
 
 namespace MOSSimulator
 {
@@ -60,7 +62,7 @@ namespace MOSSimulator
             timer.Stop();
             timer.Period = 1;
             timer.Resolution = 0;
-            timer.Tick += timer_Tick;
+            //timer.Tick += timer_Tick;
 
             active = false;
         }
@@ -157,104 +159,144 @@ namespace MOSSimulator
 
         void DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
-            if (state_rx == STATE_RX.START)
+            byte START = 0;
+            byte ADDRESS = 0;
+            ushort data_length;
+            byte[] LENGTH = new byte[2];
+
+            try
             {
-                if (uart.BytesToRead >= 1)
+                if (state_rx == STATE_RX.START)
                 {
-                    command_in.START = (byte)uart.ReadByte();
-                    if (command_in.START == 0x5a)
-                        state_rx = STATE_RX.ADDRESS;
-                    else
+                    if (uart.BytesToRead >= 1)
                     {
-                        //неправильный стартовый байт
-                        command_in.result = CmdResult.BAD_START_BYTE;
+                        //command_in.START = (byte)uart.ReadByte();
+                        START = (byte)uart.ReadByte();
+                        if (/*command_in.START*/START == 0x5a)
+                            state_rx = STATE_RX.ADDRESS;
+                        else
+                        {
+                            //неправильный стартовый байт
+                            command_in = new Cmd();
+                            command_in.result = CmdResult.BAD_START_BYTE;
+                            timer.Stop();
+                            uart.DiscardInBuffer();
+                            //вызов метода uart_received(Cmd com_in) в MainWindow через делегат RcvdMsg для отображения информации
+                            received(command_in);
+                        }
+                    }
+                }
+                if (state_rx == STATE_RX.ADDRESS)
+                {
+                    if (uart.BytesToRead >= 1)
+                    {
+                        ADDRESS = (byte)uart.ReadByte();
+                        //command_in.ADDRESS = (byte)uart.ReadByte();
+
+                        state_rx = STATE_RX.DATALENGTH;
+                    }
+                }
+                if (state_rx == STATE_RX.DATALENGTH)
+                {
+                    if (uart.BytesToRead >= 2)
+                    {
+                        for (int i = 0; i < 2; i++)
+                            LENGTH[i] = (byte)uart.ReadByte();
+                        //command_in.LENGTH[i] = (byte)uart.ReadByte();
+
+                        //создание command_in с размером блока данных, полученных в сообщении
+                        //*2 так как размер поля данных в сообщении передается в 16-битных словах
+                        data_length = BitConverter.ToUInt16(LENGTH, 0);
+                        if (data_length * 2 > uart.BytesToRead)
+                            throw new OverflowException();
+                        command_in = new Cmd(2 * BitConverter.ToUInt16(LENGTH, 0));
+                        command_in.START = START;
+                        command_in.ADDRESS = ADDRESS;
+                        for (int i = 0; i < 2; i++)
+                            command_in.LENGTH[i] = LENGTH[i];                      
+                        state_rx = STATE_RX.CHKSUM1;
+                    }
+                }
+                if (state_rx == STATE_RX.CHKSUM1)
+                {
+                    if (uart.BytesToRead >= 2)
+                    {
+                        byte[] checksum1Arr = new byte[2];
+                        checksum1Arr[0] = (byte)uart.ReadByte();
+                        checksum1Arr[1] = (byte)uart.ReadByte();
+
+                        command_in.CHECKSUM1 = BitConverter.ToUInt16(checksum1Arr, 0);
+
+                        byte[] b = command_in.GetBufToSend();
+
+                        if (checksum1Arr[0] != b[4] || checksum1Arr[1] != b[5])
+                        {
+                            command_in.result = CmdResult.BAD_CHKSUM1;
+                        }
+                        else
+                        {
+                            state_rx = STATE_RX.DATA;
+                        }
+
+                        //timer.Stop();
+                        //uart.DiscardInBuffer();
+                        //received(command_in);
+                    }
+                }
+                if (state_rx == STATE_RX.DATA)
+                {
+                    if (uart.BytesToRead >= command_in.DATA.Length)
+                    {
+                        for (int i = 0; i < command_in.DATA.Length; i++)//длина пакета вх. данных 12 байт для ГСП, 8 для ЛД...
+                            command_in.DATA[i] = (byte)uart.ReadByte();
+                        state_rx = STATE_RX.CHKSUM2;
+                    }
+                }
+                if (state_rx == STATE_RX.CHKSUM2)//2 байта контр. сумма
+                {
+                    if (uart.BytesToRead >= 2)
+                    {
+                        byte[] checksum2Arr = new byte[2];
+                        checksum2Arr[0] = (byte)uart.ReadByte();
+                        checksum2Arr[1] = (byte)uart.ReadByte();
+
+                        command_in.CHECKSUM2 = BitConverter.ToUInt16(checksum2Arr, 0);
+
+                        byte[] b = command_in.GetBufToSend();
+
+                        if (checksum2Arr[0] != b[GSP_PACKET_SIZE - 2] || checksum2Arr[1] != b[GSP_PACKET_SIZE - 1])
+                        {
+                            command_in.result = CmdResult.BAD_CHKSUM2;
+                        }
+                        else
+                        {
+                            command_in.result = CmdResult.SUCCESS;
+                        }
+
                         timer.Stop();
                         uart.DiscardInBuffer();
-                        //вызов метода uart_received(Cmd com_in) в MainWindow через делегат RcvdMsg для отображения информации
-                        received(command_in);
+                        received(command_in);//Возбуждаем событие received и передаем ему данные, прием в MainWindow.uart_received() 
                     }
                 }
             }
-            if (state_rx == STATE_RX.ADDRESS)
+            catch (OverflowException)
             {
-                if (uart.BytesToRead >= 1)
-                {
-                    command_in.ADDRESS = (byte)uart.ReadByte();
-
-                    state_rx = STATE_RX.DATALENGTH;
-                }
+                Debug.WriteLine("DataReceived() OverflowException error, data_length * 2 > uart.BytesToRead()");
+                Debug.WriteLine("time: {0}.", DateTime.Now);
             }
-            if (state_rx == STATE_RX.DATALENGTH)
+            catch (IOException exc)
             {
-                if (uart.BytesToRead >= 2)
-                {
-                    for (int i = 0; i < 2/*command_in.LENGTH.Length*2*/; i++)
-                        command_in.LENGTH[i] = (byte)uart.ReadByte();
-
-                    state_rx = STATE_RX.CHKSUM1;
-                }
+                Debug.WriteLine("DataReceived() IOException error", exc.ToString());
+                Debug.WriteLine("time: {0}.", DateTime.Now);
+                //Console.WriteLine("Error reading data: {0}.",
+                //  exc.GetType().Name);
             }
-            if (state_rx == STATE_RX.CHKSUM1)
+            catch (Exception exc)
             {
-                if (uart.BytesToRead >= 2)
-                {
-                    byte[] checksum1Arr = new byte[2];
-                    checksum1Arr[0] = (byte)uart.ReadByte();
-                    checksum1Arr[1] = (byte)uart.ReadByte();
-
-                    command_in.CHECKSUM1 = BitConverter.ToUInt16(checksum1Arr, 0);
-
-                    byte[] b = command_in.GetBufToSend();
-
-                    if (checksum1Arr[0] != b[4] || checksum1Arr[1] != b[5])
-                    {
-                        command_in.result = CmdResult.BAD_CHKSUM1;
-                    }
-                    else
-                    {
-                        state_rx = STATE_RX.DATA;
-                    }
-
-                    //timer.Stop();
-                    //uart.DiscardInBuffer();
-                    //received(command_in);
-                }
+                Debug.WriteLine("DataReceived() Exception error", exc.ToString());
+                Debug.WriteLine("time: {0}.", DateTime.Now);
             }
-            if (state_rx == STATE_RX.DATA)
-            {
-                if (uart.BytesToRead >= command_in.DATA.Length)
-                {
-                    for (int i = 0; i < 12/*command_in.DATA.Length*/; i++)//должно быть 10 байт, а не 12 ? длина пакета данных 10 байт для ГСП
-                        command_in.DATA[i] = (byte)uart.ReadByte();
-                    state_rx = STATE_RX.CHKSUM2;
-                }
-            }
-            if (state_rx == STATE_RX.CHKSUM2)
-            {
-                if (uart.BytesToRead >= 2)
-                {
-                    byte[] checksum2Arr = new byte[2];
-                    checksum2Arr[0] = (byte)uart.ReadByte();
-                    checksum2Arr[1] = (byte)uart.ReadByte();
 
-                    command_in.CHECKSUM2 = BitConverter.ToUInt16(checksum2Arr, 0);
-
-                    byte[] b = command_in.GetBufToSend();
-
-                    if (checksum2Arr[0] != b[GSP_PACKET_SIZE - 2] || checksum2Arr[1] != b[GSP_PACKET_SIZE - 1])
-                    {
-                        command_in.result = CmdResult.BAD_CHKSUM2;
-                    }
-                    else
-                    {
-                        command_in.result = CmdResult.SUCCESS;
-                    }
-
-                    timer.Stop();
-                    uart.DiscardInBuffer();
-                    received(command_in);//Возбуждаем событие received и передаем ему данные, прием в MainWindow.uart_received() 
-                }
-            }
             if (time <= 0)
             {
                 command_in.result = CmdResult.TIMEOUT;
@@ -425,7 +467,9 @@ namespace MOSSimulator
                     uart.Write(buf, 0, buf.Length);
                     showBufferWasSent(buf);
 
-                    command_in = new Cmd();
+                    //не создавать тут экземпляр command_in, а создавать при приеме сообщения из uart в методе
+                    //DataReceived(), т.к. неизвестна длина блока данных
+                    //command_in = new Cmd();
 
                     state_rx = STATE_RX.START;
                     time = timeout;

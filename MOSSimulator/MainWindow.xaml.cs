@@ -36,6 +36,10 @@ namespace MOSSimulator
     public partial class MainWindow : Window
     {
         public Log frmLog;
+        public StatusWindow ldStatusWindow;
+        public StatusWindow tvk1StatusWindow;
+        public StatusWindow tvk2StatusWindow;
+        public StatusWindow tpvkStatusWindow;
         public Uart uart;
         int cntStartErrors, cntTimeOuts, cntChkSums, numOfPocket, cntSuccess;
         private Multimedia.Timer tmrExchange;//таймер для ПЕРЕДАЧИ
@@ -54,6 +58,7 @@ namespace MOSSimulator
         StructureCommandLD st_outLD, st_inLD;
         StructureCommandTVK2 st_outTVK2;
         StructureCommandTVK1 st_outTVK1;
+        StructureCommandTPVK st_outTPVK;
 
         Device currentDevice;
         GearMode gearMode;
@@ -89,16 +94,21 @@ namespace MOSSimulator
         const int TVK2_PACKET_SIZE_OUT = 30;
         const int TVK1_DATA_SIZE_OUT = 16;
         const int TVK1_PACKET_SIZE_OUT = 24;
+        const int TPVK_DATA_SIZE_OUT = 13;
+        const int TPVK_PACKET_SIZE_OUT = 21;
+
         double AZSpeed, ELSpeed;//хранение значений скоростей наведения при управлении джойстиком, значение в диапазоне 0..1
         int joystickZoneInsensibilityX, joystickZoneInsensibilityY;
         bool camZoomTeleVariableSend;
         bool camZoomWideVariableSend;
         bool camZoomStopSend;
         bool camZoomDirectSend;
-        //bool camZoomTeleVariableSend;
-        //bool camZoomWideVariableSend;
-        bool camFocusFarSend;
-        bool camFocusNearSend;
+        //bool camZoomTeleSend;
+        //bool camZoomWideSend;
+        bool camFocusFarVariableSend;
+        bool camFocusNearVariableSend;
+        //bool camFocusFarSend;
+        //bool camFocusNearSend;
         bool camFocusStopSend;
         bool camFocusDirectSend;
         bool camAutoFocusSend;
@@ -144,6 +154,12 @@ namespace MOSSimulator
             comTPVK = new CmdTPVK();
             comLD = new CmdLD();
             frmLog = new Log();
+            //другое поведение WPF кантролов, не надо создавать тут экземпляры окон, в отличие от WinForms
+            /*ldStatusWindow = new StatusWindow();
+            tvk1StatusWindow = new StatusWindow();
+            tvk2StatusWindow = new StatusWindow();
+            tpvkStatusWindow = new StatusWindow();*/
+
             tmrExchange = new Multimedia.Timer(this.components);
             tmrExchange.Mode = Multimedia.TimerMode.OneShot;
             tmrExchange.Period = 1;
@@ -152,11 +168,12 @@ namespace MOSSimulator
             tmrExchange.Tick += new System.EventHandler(this.tmrExchange_Tick);
 
             st_out = new StructureCommand();
-            st_in = new StructureCommand();            
+            //st_in = new StructureCommand();            
             st_outLD = new StructureCommandLD();
-            st_inLD = new StructureCommandLD();
+            //st_inLD = new StructureCommandLD();
             st_outTVK2 = new StructureCommandTVK2();
             st_outTVK1 = new StructureCommandTVK1();
+            st_outTPVK = new StructureCommandTPVK();
 
             sliderAZAngle.IsEnabled = false;
             sliderELAngle.IsEnabled = false;
@@ -185,6 +202,9 @@ namespace MOSSimulator
             buttonFocusLeft.IsEnabled = false;
             buttonFocusRight.IsEnabled = false;
 
+            sliderTVK2Exposure.IsEnabled = false;
+            numTVK2Exposure.IsEnabled = false;
+
             currentDevice = Device.MU_GSP;
             cycleIndex = 0;
 
@@ -205,8 +225,8 @@ namespace MOSSimulator
             camZoomWideVariableSend = false;
             camZoomStopSend = false;
             camZoomDirectSend = false;
-            camFocusFarSend = false;
-            camFocusNearSend = false;
+            camFocusFarVariableSend = false;
+            camFocusNearVariableSend = false;
             camFocusStopSend = false;
             camFocusDirectSend = false;
             camAutoFocusSend = false;
@@ -220,6 +240,7 @@ namespace MOSSimulator
         {
             if(frmLog.IsDisposed)
                 frmLog = new Log();
+            frmLog.Text = "Лог";
             frmLog.Show();
             frmLog.Open();
         }
@@ -500,8 +521,8 @@ namespace MOSSimulator
         //чтение данных из порта
         void uart_received(Cmd com_in)
         {
-            //Dispatcher.BeginInvoke(new Action(delegate
-            //{       //выкинул BeginInvoke т.к. прием не по таймеру, а по возбуждению события received в Uart
+            Dispatcher.BeginInvoke(new Action(delegate
+            {       //выкинул BeginInvoke т.к. прием не по таймеру, а по возбуждению события received в Uart
                 switch (com_in.result)
                 {
                     case CmdResult.TIMEOUT:
@@ -525,7 +546,7 @@ namespace MOSSimulator
                             cntSuccess++;
                         }
                         break;
-                }
+                }                
 
                 lblSuccess.Content = String.Format("Усп. пакетов - {0}", cntSuccess.ToString());
                 lblStatusUART.Content = String.Format("Статус обмена - {0}", com_in.result.ToString());
@@ -533,9 +554,13 @@ namespace MOSSimulator
                 lblErrorChkSums.Content = String.Format("Ошибки контр. суммы - {0}", cntChkSums.ToString());
                 lblTimeOuts.Content = String.Format("Превыш. времени ожидания - {0}", cntTimeOuts.ToString());
 
-            //МУ ГСП
-            //режим работы привода азимута
-            if (cycleIndex == 0 || cycleIndex == 2 || cycleIndex == 4 || cycleIndex == 6)
+                //проверка на отсутствие блока данных                
+                if (BitConverter.ToUInt16(com_in.LENGTH, 0) == 0)
+                    return;
+
+                //МУ ГСП
+                //режим работы привода азимута
+                if ((bool)checkBoxmMUGSPInfExchangeONOFF.IsChecked && (cycleIndex == 0 || cycleIndex == 2 || cycleIndex == 4 || cycleIndex == 6))
             {
                 int index = com_in.DATA[0];
 
@@ -775,28 +800,189 @@ namespace MOSSimulator
             //END МУ ГСП
 
             //ТВК 1
-            if (cycleIndex == 1)
+            if ((bool)checkBoxmTVK1InfExchangeONOFF.IsChecked && cycleIndex == 1)
             {
+                string strStatusTVK1 = "";
+                //состояние READY
+                byte[] byteArr = new byte[1];
+                byte[] byteArr2 = new byte[1];
+                byteArr[0] = com_in.DATA[0];
+                byteArr2[0] = com_in.DATA[1];
+
+                BitArray bitArray = new BitArray(byteArr);
+                BitArray bitArray2 = new BitArray(byteArr2);                
+
+                if (!bitArray.Get(2))
+                    textBoxTVK1VIDEO_IN_STATE.Text += "данные не принимаются \n";
+                else
+                    textBoxTVK1VIDEO_IN_STATE.Text += "данные принимаются \n";
+                if (bitArray.Get(3) )
+                    textBoxTVK1VIDEO_OUT_STATE_IN.Text += "данные не передаются\n";
+                else
+                    textBoxTVK1VIDEO_OUT_STATE_IN.Text += "данные передаются\n";
+
+                if (tvk1StatusWindow != null)
+                    tvk1StatusWindow.fillData(strStatusTVK1);
             }
             //ТВК 2
-            if (cycleIndex == 3)
+            if ((bool)checkBoxmTVK2InfExchangeONOFF.IsChecked && cycleIndex == 3)
             {
+                string strStatusTVK2 = "";
+                //состояние READY
+                byte[] byteArr = new byte[1];
+                byte[] byteArr2 = new byte[1];
+                byteArr[0] = com_in.DATA[0];
+                byteArr2[0] = com_in.DATA[1];
+
+                BitArray bitArray = new BitArray(byteArr);
+                BitArray bitArray2 = new BitArray(byteArr2);                
+
+                if (!bitArray.Get(0))
+                    textBoxTVK2READY_IN.Text += "камера выключена или не принимается видеоинформация\n";
+                else
+                    textBoxTVK2READY_IN.Text += "камера включена и данные принимаются верно\n";
+                //VIDEO_OUT_STATE
+                if (bitArray.Get(0))
+                    textBoxTVK2VIDEO_OUT_STATE_IN.Text += "данные не передаются\n";
+                else
+                    textBoxTVK2VIDEO_OUT_STATE_IN.Text += "данные передаются\n";
+
+                if (tvk2StatusWindow != null)
+                    tvk2StatusWindow.fillData(strStatusTVK2);
             }
             //ТПВК
-            if (cycleIndex == 5)
+            if ((bool)checkBoxTPVKInfExchangeONOFF.IsChecked && cycleIndex == 5)
             {
+                string strStatusTPVK = "";
+                //состояние READY
+                byte[] byteArr = new byte[1];
+                byte[] byteArr2 = new byte[1];
+                byteArr[0] = com_in.DATA[2];
+                byteArr2[0] = com_in.DATA[3];
+
+                BitArray bitArray = new BitArray(byteArr);
+                BitArray bitArray2 = new BitArray(byteArr2);
+
+                if (!bitArray.Get(0))
+                    textBoxTPVKREADY_IN.Text += "0\n";
+                else
+                    textBoxTPVKREADY_IN.Text += "1\n";
+                if (tpvkStatusWindow != null)
+                    tpvkStatusWindow.fillData(strStatusTPVK);
             }
             //ЛД
-            if (cycleIndex == 7)
+            if ((bool)checkBoxLDInfExchangeONOFF.IsChecked && cycleIndex == 7)
             {
+                //состояние SOST
+                byte[] byteArr = new byte[1];
+                byte[] byteArr2 = new byte[1];
+                byteArr[0] = com_in.DATA[1];
+                byteArr2[0] = com_in.DATA[2];                
+
+                BitArray bitArray = new BitArray(byteArr);
+                BitArray bitArray2 = new BitArray(byteArr2);
+                string strStatusLD="";
+
+                textBoxLDSOST_IN.Text = "";
+                if (!bitArray.Get(0) && !bitArray.Get(1) && !bitArray.Get(2))
+                    textBoxLDSOST_IN.Text += "Подготовка к работе\n";
+                if (bitArray.Get(0) && !bitArray.Get(1) && !bitArray.Get(2))
+                    textBoxLDSOST_IN.Text += "Готов к работе\n";
+                if (!bitArray.Get(0) && bitArray.Get(1) && !bitArray.Get(2))
+                    textBoxLDSOST_IN.Text += "Идет цикл измерения дальности\n";
+                if (bitArray.Get(0) && bitArray.Get(1) && !bitArray.Get(2))
+                    textBoxLDSOST_IN.Text += "Дальномер неисправен\n";
+
+                strStatusLD = "";
+                if (!bitArray.Get(4) && !bitArray.Get(5) && !bitArray.Get(6) && !bitArray.Get(7))
+                    strStatusLD += "измерения дальности не проводились\n";
+                if (bitArray.Get(4) && !bitArray.Get(5) && !bitArray.Get(6) && !bitArray.Get(7))
+                    strStatusLD += "штатное завершение цикла ИД\n";
+                if (!bitArray.Get(4) && bitArray.Get(5) && !bitArray.Get(6) && !bitArray.Get(7))
+                    strStatusLD += "много целей\n";
+                if (bitArray.Get(4) && bitArray.Get(5) && !bitArray.Get(6) && !bitArray.Get(7))
+                    strStatusLD += "промах\n";
+                if (!bitArray.Get(4) && !bitArray.Get(5) && bitArray.Get(6) && !bitArray.Get(7))
+                    strStatusLD += "нет старта\n";
+                if (bitArray.Get(4) && !bitArray.Get(5) && bitArray.Get(6) && !bitArray.Get(7))
+                    strStatusLD += "цель в стробе\n";
+
+                if (bitArray2.Get(0))
+                    strStatusLD += "нет готовности БВВ\n";
+                if (bitArray2.Get(1))
+                    strStatusLD += "нет запуска БВВ\n";
+                if (!bitArray2.Get(2))
+                    strStatusLD += "Режим БВВ (затвор): активный\n";
+                else
+                    strStatusLD += "Режим БВВ (затвор): пассивный\n";
+
+                if (!bitArray2.Get(3))
+                    strStatusLD += "Серия БВВ: 0 – одиночный(Р max)\n";
+                else
+                    strStatusLD += "Серия БВВ: 1 – серия\n";
+                if (!bitArray2.Get(4))
+                    strStatusLD += "Блокировка ЛД:0 – нет\n";
+                else
+                    strStatusLD += "Блокировка ЛД:1 – есть\n";
+                if (!bitArray2.Get(5))
+                    strStatusLD += "Блокировка ФПУ: 0 – нет\n";
+                else
+                    strStatusLD += "Блокировка ФПУ: 1 – есть\n";
+                if (!bitArray2.Get(6))
+                    strStatusLD += "Тип ФПУ:0 – ФПУ - 35\n";
+                else
+                    strStatusLD += "Тип ФПУ: 1 – ФПУ - 21ВТ\n";
+                if (bitArray2.Get(7))
+                    strStatusLD += "Цель меньше Dmin:1 – есть\n";
+                else
+                    strStatusLD += "Цель меньше Dmin:0 – нет\n";
+
+                byte[] byteArr3 = new byte[4];
+                byteArr3[0] = com_in.DATA[3];
+                byteArr3[1] = com_in.DATA[4];
+                byteArr3[2] = com_in.DATA[5];
+                int valTIME_MSU = BitConverter.ToInt32(byteArr3, 0);
+
+                strStatusLD += "TIME_MSU: " + valTIME_MSU.ToString() + "\n";
+
+                byte[] byteArr4 = new byte[2];
+                byteArr4[0] = com_in.DATA[6];
+                byteArr4[1] = com_in.DATA[7];
+                
+                short valNUM_TARGET = BitConverter.ToInt16(byteArr4, 0);
+                strStatusLD += "NUM_TARGET: " + valNUM_TARGET.ToString() + "\n";
+
+                //заполнить массив дальностей до целей ЛД
+                if (com_in.DATA.Length > 8 && valNUM_TARGET>0 && valNUM_TARGET < 33)
+                {
+                        byte[] byteArr5 = new byte[2];
+                        short[] arrDist = new short[valNUM_TARGET];
+                        List<LDTableTagetsDistances> result = new List<LDTableTagetsDistances>(valNUM_TARGET);
+                        for (int i = 0; i < valNUM_TARGET; i++)
+                        {
+                            byteArr5[0] = com_in.DATA[6 + i];
+                            byteArr5[1] = com_in.DATA[7 + i];
+                            arrDist[i] = BitConverter.ToInt16(byteArr5, 0);
+                            result.Add(new LDTableTagetsDistances(i + 1, arrDist[i].ToString()));
+
+                        }
+                        dataGridLDTargetsDistances.ItemsSource = result;
+                }
+
+                if(ldStatusWindow!=null)
+                    ldStatusWindow.fillData(strStatusLD);
             }
+            //ЛД END
 
             if ((bool)chbCycleMode.IsChecked)
                     tmrExchange.Start();
-            //}));
 
             //now SEND COMMAND immediately ! (not using tmrExchange)
             InitSendCommand();
+        }));
+
+            //now SEND COMMAND immediately ! (not using tmrExchange)
+            //InitSendCommand();
         }
 
         public void ControlChanged(object sender, EventArgs e)
@@ -1155,9 +1341,20 @@ namespace MOSSimulator
             ControlChanged(sender, e);
         }
 
-        private void buttonLDGetState_Click(object sender, RoutedEventArgs e)
+        public static Boolean IsDisposed(Window window)
         {
-            ControlChanged(sender, e);
+            return new System.Windows.Interop.WindowInteropHelper(window).Handle == IntPtr.Zero;
+        }
+
+        private void buttonLDGetState_Click(object sender, RoutedEventArgs e)
+        { 
+           // bool disp = IsDisposed(ldStatusWindow);
+
+            if (ldStatusWindow == null || IsDisposed(ldStatusWindow)== true)
+               ldStatusWindow = new StatusWindow();
+            ldStatusWindow.Title = "Состояние ЛД";
+            
+            ldStatusWindow.Show();            
         }
 
         private void buttonLDSettingsExtendState_Click(object sender, RoutedEventArgs e)
@@ -1225,6 +1422,11 @@ namespace MOSSimulator
 
         private void checkBoxJoystickUse_Checked(object sender, RoutedEventArgs e)
         {
+            sliderAZSpeed.IsEnabled = false;
+            sliderELSpeed.IsEnabled = false;
+            radioButtonGSPSpeedControl1X.IsEnabled = true;
+            radioButtonGSPSpeedControl2X.IsEnabled = true;
+            radioButtonGSPSpeedControl4X.IsEnabled = true;
             /*checkBoxJoystickUse.IsChecked = !checkBoxJoystickUse.IsChecked;
 
             int indAZ;
@@ -1515,9 +1717,9 @@ namespace MOSSimulator
 
             buttonResetGSPSpeedControls.IsEnabled = true;
             checkBoxJoystickUse.IsEnabled = true;
-            radioButtonGSPSpeedControl1X.IsEnabled = true;
-            radioButtonGSPSpeedControl2X.IsEnabled = true;
-            radioButtonGSPSpeedControl4X.IsEnabled = true;
+//             radioButtonGSPSpeedControl1X.IsEnabled = true;
+//             radioButtonGSPSpeedControl2X.IsEnabled = true;
+//             radioButtonGSPSpeedControl4X.IsEnabled = true;
 
             ControlChanged(sender, e);
         }
@@ -1553,9 +1755,9 @@ namespace MOSSimulator
 
             buttonResetGSPSpeedControls.IsEnabled = true;
             checkBoxJoystickUse.IsEnabled = true;
-            radioButtonGSPSpeedControl1X.IsEnabled = true;
-            radioButtonGSPSpeedControl2X.IsEnabled = true;
-            radioButtonGSPSpeedControl4X.IsEnabled = true;
+//             radioButtonGSPSpeedControl1X.IsEnabled = true;
+//             radioButtonGSPSpeedControl2X.IsEnabled = true;
+//             radioButtonGSPSpeedControl4X.IsEnabled = true;
 
             ControlChanged(sender, e);
         }
@@ -1598,6 +1800,14 @@ namespace MOSSimulator
             //if (sets != null)
             //    SaveSettings();
             MyJoystick.Close();
+            if(ldStatusWindow!=null)
+                ldStatusWindow.Close();
+            if (tvk1StatusWindow != null)
+                tvk1StatusWindow.Close();
+            if (tvk2StatusWindow != null)
+                tvk2StatusWindow.Close();
+            if (tpvkStatusWindow != null)
+                tpvkStatusWindow.Close();
             DoEvents(); //Application.DoEvents();
         }
 
@@ -1635,7 +1845,7 @@ namespace MOSSimulator
 
         private void sliderELSpeedCompensation_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            numAZSpeedCompensation.Value = (int)sliderAZSpeedCompensation.Value;
+            numELSpeedCompensation.Value = (int)sliderELSpeedCompensation.Value;
         }
 
         private void numAZSpeedCompensation_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
@@ -1687,6 +1897,8 @@ namespace MOSSimulator
 
         private void radioButtonExpoModeManual_Checked(object sender, RoutedEventArgs e)
         {
+            sliderTVK2Exposure.IsEnabled = true;
+            numTVK2Exposure.IsEnabled = true;
             ControlChanged(sender, e);
         }
 
@@ -1712,7 +1924,7 @@ namespace MOSSimulator
 
         private void checkBoxmLDInfExchangeONOFF(object sender, RoutedEventArgs e)
         {
-
+            ControlChanged(sender, e);
         }
 
         private void sliderTVK2CONTRAST_GAIN_TouchLeave(object sender, TouchEventArgs e)
@@ -1790,6 +2002,11 @@ namespace MOSSimulator
 
         private void checkBoxJoystickUse_Unchecked(object sender, RoutedEventArgs e)
         {
+            sliderAZSpeed.IsEnabled = true;
+            sliderELSpeed.IsEnabled = true;
+            radioButtonGSPSpeedControl1X.IsEnabled = false;
+            radioButtonGSPSpeedControl2X.IsEnabled = false;
+            radioButtonGSPSpeedControl4X.IsEnabled = false;
             ControlChanged(sender, e);
         }
 
@@ -1814,8 +2031,8 @@ namespace MOSSimulator
             if (buttonFocusRight != null)
                 buttonFocusRight.IsEnabled = false;
 
-            camFocusFarSend = false;
-            camFocusNearSend = false;
+            camFocusFarVariableSend = false;
+            camFocusNearVariableSend = false;
             camFocusStopSend = false;
             camFocusDirectSend = false;
             camAutoFocusSend = true;
@@ -1857,8 +2074,8 @@ namespace MOSSimulator
             camZoomStopSend = false;
             camZoomDirectSend = true;
 
-            camFocusFarSend = false;
-            camFocusNearSend = false;
+            camFocusFarVariableSend = false;
+            camFocusNearVariableSend = false;
             camFocusStopSend = false;
             camFocusDirectSend = false;
             camAutoFocusSend = false;
@@ -1870,8 +2087,8 @@ namespace MOSSimulator
         private void numTVK1Focus_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
             sliderTVK1Focus.Value = (int)numTVK1Focus.Value;
-            camFocusFarSend = false;
-            camFocusNearSend = false;
+            camFocusFarVariableSend = false;
+            camFocusNearVariableSend = false;
             camFocusStopSend = false;
             camFocusDirectSend = true;
             camAutoFocusSend = false;
@@ -1944,8 +2161,8 @@ namespace MOSSimulator
             camZoomStopSend = true;
             camZoomDirectSend = false;
 
-            camFocusFarSend = false;
-            camFocusNearSend = false;
+            camFocusFarVariableSend = false;
+            camFocusNearVariableSend = false;
             camFocusStopSend = false;
             camFocusDirectSend = false;
             camAutoFocusSend = false;
@@ -1961,8 +2178,8 @@ namespace MOSSimulator
             camZoomStopSend = true;
             camZoomDirectSend = false;
 
-            camFocusFarSend = false;
-            camFocusNearSend = false;
+            camFocusFarVariableSend = false;
+            camFocusNearVariableSend = false;
             camFocusStopSend = false;
             camFocusDirectSend = false;
             camAutoFocusSend = false;
@@ -1972,8 +2189,8 @@ namespace MOSSimulator
 
         private void buttonFocusLeft_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            camFocusFarSend = false;
-            camFocusNearSend = false;
+            camFocusFarVariableSend = false;
+            camFocusNearVariableSend = false;
             camFocusStopSend = true;
             camFocusDirectSend = false;
             camAutoFocusSend = false;
@@ -2000,8 +2217,8 @@ namespace MOSSimulator
             camZoomStopSend = false;
             camZoomDirectSend = false;
 
-            camFocusFarSend = false;
-            camFocusNearSend = false;
+            camFocusFarVariableSend = false;
+            camFocusNearVariableSend = false;
             camFocusStopSend = false;
             camFocusDirectSend = false;
             camAutoFocusSend = false;
@@ -2017,8 +2234,8 @@ namespace MOSSimulator
             camZoomStopSend = false;
             camZoomDirectSend = false;
 
-            camFocusFarSend = false;
-            camFocusNearSend = false;
+            camFocusFarVariableSend = false;
+            camFocusNearVariableSend = false;
             camFocusStopSend = false;
             camFocusDirectSend = false;
             camAutoFocusSend = false;            
@@ -2036,8 +2253,8 @@ namespace MOSSimulator
             camZoomStopSend = false;
             camZoomDirectSend = true;
 
-            camFocusFarSend = false;
-            camFocusNearSend = false;
+            camFocusFarVariableSend = false;
+            camFocusNearVariableSend = false;
             camFocusStopSend = false;
             camFocusDirectSend = false;
             camAutoFocusSend = false;
@@ -2059,8 +2276,8 @@ namespace MOSSimulator
 
         private void buttonFocusRight_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            camFocusFarSend = true;
-            camFocusNearSend = false;
+            camFocusFarVariableSend = true;
+            camFocusNearVariableSend = false;
             camFocusStopSend = false;
             camFocusDirectSend = false;
             camAutoFocusSend = false;
@@ -2076,8 +2293,8 @@ namespace MOSSimulator
 
         private void buttonFocusLeft_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            camFocusFarSend = false;
-            camFocusNearSend = true;
+            camFocusFarVariableSend = false;
+            camFocusNearVariableSend = true;
             camFocusStopSend = false;
             camFocusDirectSend = false;
             camAutoFocusSend = false;
@@ -2094,8 +2311,8 @@ namespace MOSSimulator
         {
             if (numTVK1Focus != null)
                 numTVK1Focus.Value = (int)sliderTVK1Focus.Value;
-            camFocusFarSend = false;
-            camFocusNearSend = false;
+            camFocusFarVariableSend = false;
+            camFocusNearVariableSend = false;
             camFocusStopSend = false;
             camFocusDirectSend = true;
             camAutoFocusSend = false;            
@@ -2117,8 +2334,8 @@ namespace MOSSimulator
             buttonFocusLeft.IsEnabled = true;
             buttonFocusRight.IsEnabled = true;
 
-            camFocusFarSend = false;
-            camFocusNearSend = false;
+            camFocusFarVariableSend = false;
+            camFocusNearVariableSend = false;
             camFocusStopSend = false;
             camFocusDirectSend = false;
             camAutoFocusSend = true;
@@ -2148,10 +2365,141 @@ namespace MOSSimulator
             ControlChanged(sender, e);
         }
 
+        private void numTVK1FocusFarNearVariableP_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxmMUGSPInfExchangeONOFF_Unchecked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxmTVK2InfExchangeONOFF_Unchecked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxTVK2ONOFF_Unchecked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxTVK2VIDEO_OUT_EN_Unchecked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxmTVK1InfExchangeONOFF_Unchecked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxTPVKInfExchangeONOFF_Unchecked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxTPVKONOFF_Checked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxTPVKONOFF_Unchecked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxTPVKVIDEO_OUT_EN_Unchecked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxTPVKMarkaOnOff_Checked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxTPVKMarkaOnOff_Unchecked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxTPVKAutoexposition_Unchecked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxTPVKAutoexposition_Checked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxTPVKAutoCalibration_Unchecked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxTPVKImageEnhance_Unchecked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxTPVKImageEnhance_Checked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxTPVKAutoCalibration_Checked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void radioButtonExpoModeManual_Unchecked(object sender, RoutedEventArgs e)
+        {
+            sliderTVK2Exposure.IsEnabled = false;
+            numTVK2Exposure.IsEnabled = false;
+            ControlChanged(sender, e);
+        }
+
+        private void dataGridLDTargetsDistances_Loaded(object sender, RoutedEventArgs e)
+        {
+            List<LDTableTagetsDistances> result = new List<LDTableTagetsDistances>(3);
+            //result.Add(new LDTableTagetsDistances(1, 13456));
+            dataGridLDTargetsDistances.ItemsSource = result;
+        }
+
+        private void buttonTVK1StateRequest_Click(object sender, RoutedEventArgs e)
+        {
+            if (tvk1StatusWindow == null || IsDisposed(tvk1StatusWindow) == true)
+                tvk1StatusWindow = new StatusWindow();
+            tvk1StatusWindow.Title = "Состояние ТВК 1";
+
+            tvk1StatusWindow.Show();
+        }
+
+        private void buttonTVK2StateRequest_Click(object sender, RoutedEventArgs e)
+        {
+            if (tvk2StatusWindow == null || IsDisposed(tvk2StatusWindow) == true)
+                tvk2StatusWindow = new StatusWindow();
+            tvk2StatusWindow.Title = "Состояние ТВК 2";
+
+            tvk2StatusWindow.Show();
+        }
+
+        private void buttonTPVKStateRequest_Click(object sender, RoutedEventArgs e)
+        {
+            if (tpvkStatusWindow == null || IsDisposed(tpvkStatusWindow) == true)
+                tpvkStatusWindow = new StatusWindow();
+            tpvkStatusWindow.Title = "Состояние ТПВК";
+
+            tpvkStatusWindow.Show();
+        }
+
         private void buttonFocusRight_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            camFocusFarSend = false;
-            camFocusNearSend = false;
+            camFocusFarVariableSend = false;
+            camFocusNearVariableSend = false;
             camFocusStopSend = true;
             camFocusDirectSend = false;
             camAutoFocusSend = false;
@@ -2286,8 +2634,8 @@ namespace MOSSimulator
                 }
 
                 currentDevice = Device.TVK1;
-                //cycleIndex++;
             }
+            //МУ ГСП END
 
             //ТВК1
             if (/*TVK1DataChanged && */(bool)checkBoxmTVK1InfExchangeONOFF.IsChecked && arrayCycleDeviceOrder[cycleIndex] == 1)
@@ -2314,7 +2662,7 @@ namespace MOSSimulator
 
                 ////Управляющий байт блока управления камерой (байт 0)
                 //if (!camZoomTeleVariableSend && !camZoomWideVariableSend && !camZoomStopSend &&
-                //    !camFocusFarSend && !camFocusNearSend && !camFocusStopSend)
+                //    !camFocusFarVariableSend && !camFocusNearVariableSend && !camFocusStopSend)
                 {
                     BitArray bitArray = new BitArray(8);
                     bitArray.SetAll(false);
@@ -2488,7 +2836,7 @@ namespace MOSSimulator
                     TVK1DataChanged = false;
                 }
 
-                if (camFocusFarSend)
+                if (camFocusFarVariableSend)
                 {
                     if (TVK1DataChanged)
                         comTVK1.DATA[1] = ++Cin;
@@ -2496,11 +2844,32 @@ namespace MOSSimulator
                     comTVK1.DATA[3] = 0x01;
                     comTVK1.DATA[4] = 0x04;
                     comTVK1.DATA[5] = 0x08;
-                    comTVK1.DATA[6] = 0x02;
+
+                    //get p 4 bits value
+                    byte iValFocusFarVariableP = (byte)numTVK1FocusFarNearVariableP.Value;
+                    byte[] myBytes = new byte[1];
+                    myBytes[0] = iValFocusFarVariableP;
+                    BitArray bitArrayZoom = new BitArray(myBytes);
+                    BitArray byte0 = new BitArray(8);
+                    //set p
+                    byte0.Set(0, bitArrayZoom.Get(0));
+                    byte0.Set(1, bitArrayZoom.Get(1));
+                    byte0.Set(2, bitArrayZoom.Get(2));
+                    byte0.Set(3, bitArrayZoom.Get(3));
+                    //set 2
+                    byte0.Set(4, false);
+                    byte0.Set(5, true);
+                    byte0.Set(6, false);
+                    byte0.Set(7, false);
+
+                    byte byteRes0 = ConvertToByte(byte0);
+
+                    comTVK1.DATA[6] = byteRes0;
+                    //comTVK1.DATA[6] = 0x02;
                     comTVK1.DATA[7] = 0xFF;
                     TVK1DataChanged = false;
                 }
-                if (camFocusNearSend)
+                if (camFocusNearVariableSend)
                 {
                     if (TVK1DataChanged)
                         comTVK1.DATA[1] = ++Cin;
@@ -2508,7 +2877,28 @@ namespace MOSSimulator
                     comTVK1.DATA[3] = 0x01;
                     comTVK1.DATA[4] = 0x04;
                     comTVK1.DATA[5] = 0x08;
-                    comTVK1.DATA[6] = 0x03;
+
+                    //get p 4 bits value
+                    byte iValFocusNearVariableP = (byte)numTVK1FocusFarNearVariableP.Value;
+                    byte[] myBytes = new byte[1];
+                    myBytes[0] = iValFocusNearVariableP;
+                    BitArray bitArrayZoom = new BitArray(myBytes);
+                    BitArray byte0 = new BitArray(8);
+                    //set p
+                    byte0.Set(0, bitArrayZoom.Get(0));
+                    byte0.Set(1, bitArrayZoom.Get(1));
+                    byte0.Set(2, bitArrayZoom.Get(2));
+                    byte0.Set(3, bitArrayZoom.Get(3));
+                    //set 3
+                    byte0.Set(4, true);
+                    byte0.Set(5, true);
+                    byte0.Set(6, false);
+                    byte0.Set(7, false);
+
+                    byte byteRes0 = ConvertToByte(byte0);
+
+                    comTVK1.DATA[6] = byteRes0;
+                    //comTVK1.DATA[6] = 0x03;
                     comTVK1.DATA[7] = 0xFF;
                     TVK1DataChanged = false;
                 }
@@ -2636,7 +3026,6 @@ namespace MOSSimulator
                 uart.SendCommand(comTVK1);
 
                 currentDevice = Device.MU_GSP;
-                //cycleIndex++;
             }
             //ТВК1 END
 
@@ -2828,19 +3217,21 @@ namespace MOSSimulator
                 uart.SendCommand(comTVK2);
 
                 currentDevice = Device.MU_GSP;
-                //cycleIndex++;
             }
+            //ТВК2 END
 
             //ТПВК
             if ((bool)checkBoxTPVKInfExchangeONOFF.IsChecked && arrayCycleDeviceOrder[cycleIndex] == 3)
             {
+                byte[] byteArray;
+                BitArray bitArray = new BitArray(8);
                 byte[] buf_chksum_header = new byte[4];
                 byte[] buf_chksum_all = new byte[22];//полная длина пакета 24 - 2 байта (длина чексуммы 2)
 
 
                 comTPVK.START = st_out.START;
                 comTPVK.ADDRESS = 14;
-                comTPVK.LENGTH[0] = 8;//длина пакета 16 байт для камеры ТПВК
+                comTPVK.LENGTH[0] = 7;//длина пакета 13 байт для камеры ТПВК
                 comTPVK.LENGTH[1] = 0;
 
                 buf_chksum_header[0] = comTPVK.START;
@@ -2850,6 +3241,30 @@ namespace MOSSimulator
 
                 ushort chksm = (ushort)CheckSumRFC1071(buf_chksum_header, 4);
                 comTPVK.CHECKSUM1 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_header, 4));
+
+                //////////
+                bitArray.SetAll(false);
+
+                /*if (st_outTVK2.POWER)
+                    bitArray.Set(0, true);
+                else
+                    bitArray.Set(0, false);
+                if (st_outTVK2.VIDEO_OUT_EN)
+                    bitArray.Set(1, true);
+                else
+                    bitArray.Set(1, false);*/
+
+
+                comTPVK.DATA[0] = ConvertToByte(bitArray);
+
+                byteArray = BitConverter.GetBytes(st_outTVK2.CONTRAST_GAIN);
+                comTPVK.DATA[1] = byteArray[0];
+                comTPVK.DATA[2] = byteArray[1];
+
+                byteArray = BitConverter.GetBytes(st_outTVK2.CONTRAST_OFFSET);
+                comTPVK.DATA[3] = byteArray[0];
+                comTPVK.DATA[4] = byteArray[1];
+                ////
 
                 comTPVK.DATA[0] = 0;
                 comTPVK.DATA[1] = 0;
@@ -2864,19 +3279,16 @@ namespace MOSSimulator
                 comTPVK.DATA[10] = 0;
                 comTPVK.DATA[11] = 0;
                 comTPVK.DATA[12] = 0;
-                comTPVK.DATA[13] = 0;
-                comTPVK.DATA[14] = 0;
-                comTPVK.DATA[15] = 0;
 
                 buf_chksum_all[0] = comTPVK.START;
                 buf_chksum_all[1] = comTPVK.ADDRESS;
                 buf_chksum_all[2] = comTPVK.LENGTH[0];
                 buf_chksum_all[3] = comTPVK.LENGTH[1];
 
-                byte[] byteArray = BitConverter.GetBytes(chksm);
+                byte[] byteArray2 = BitConverter.GetBytes(chksm);
 
-                buf_chksum_all[4] = byteArray[1];
-                buf_chksum_all[5] = byteArray[0];
+                buf_chksum_all[4] = byteArray2[1];
+                buf_chksum_all[5] = byteArray2[0];
 
                 buf_chksum_all[6] = comTPVK.DATA[0];
                 buf_chksum_all[7] = comTPVK.DATA[1];
@@ -2891,19 +3303,15 @@ namespace MOSSimulator
                 buf_chksum_all[16] = comTPVK.DATA[10];
                 buf_chksum_all[17] = comTPVK.DATA[11];
                 buf_chksum_all[18] = comTPVK.DATA[12];
-                buf_chksum_all[19] = comTPVK.DATA[13];
-                buf_chksum_all[20] = comTPVK.DATA[14];
-                buf_chksum_all[21] = comTPVK.DATA[15];
 
-                ushort chksm2 = (ushort)CheckSumRFC1071(buf_chksum_all, 22);
-                comTPVK.CHECKSUM2 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_all, 22));
+                ushort chksm2 = (ushort)CheckSumRFC1071(buf_chksum_all, 19);
+                comTPVK.CHECKSUM2 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_all, 19));
 
                 lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
 
                 uart.SendCommand(comTPVK);
 
                 currentDevice = Device.MU_GSP;
-                //cycleIndex++;
             }
 
             //ЛД
@@ -3012,7 +3420,6 @@ namespace MOSSimulator
                 uart.SendCommand(comLD);
 
                 currentDevice = Device.MU_GSP;
-                //cycleIndex=0;
             }
 
             //наращивать счетчик циклограммы в любом случае, даже если дивайс не участвует в инф. обмене
@@ -3384,6 +3791,23 @@ namespace MOSSimulator
             st_outTVK1.VIDEO_IN_EN = (bool)checkBoxTVK1VIDEO_IN_EN.IsChecked;
             /* TVK1 section END */
 
+            /* TPVK section */
+            if (st_outTPVK == null)
+                return;
+
+            st_outTPVK.START = 0x5a;
+            st_outTPVK.ADDRESS = 14;
+            st_outTPVK.LENGTH[0] = TPVK_DATA_SIZE_OUT;
+            st_outTPVK.LENGTH[1] = 0;
+
+            //data
+            /*if ((bool)radioButtonExpoModeAuto.IsChecked)
+                st_outTPVK.MODE_POLARITY__AUTO_CALIBRATION = false;
+            else
+                st_outTPVK.MODE_POLARITY__AUTO_CALIBRATION = true;*/
+
+            /* TPVK section END */
+
         }
 
         private long CheckSumRFC1071(byte[] buf, int Lenght)
@@ -3397,5 +3821,16 @@ namespace MOSSimulator
             return (CheckSum & 0x0000FFFF);
         }
 
+    }
+
+    class LDTableTagetsDistances
+    {
+        public LDTableTagetsDistances(int Id, string val)
+        {
+            this.Номер = Id;
+            this.Расстояние = val;
+        }
+        public int Номер { get; set; }
+        public string Расстояние { get; set; }
     }
 }

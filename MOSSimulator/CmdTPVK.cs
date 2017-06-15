@@ -25,8 +25,8 @@ namespace MOSSimulator
         public CmdResult result;
 
         private byte[] buf;
-        const int TPVK_DATA_SIZE = 16;
-        const int TPVK_PACKET_SIZE = 24;
+        const int TPVK_DATA_SIZE = 13;
+        const int TPVK_PACKET_SIZE = 21;
 
         public CmdTPVK()
         {
@@ -49,7 +49,7 @@ namespace MOSSimulator
         /// <summary>
         /// Собирает все данные команды в один буфер, считает chksum.
         /// </summary>
-        /// <returns>Возвращает собранный буфер (18 байт)</returns>
+        /// <returns>Возвращает собранный буфер (24 байт)</returns>
         public override byte[] GetBufToSend()
         {
             //ushort checksum1=0;

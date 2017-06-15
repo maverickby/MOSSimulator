@@ -36,7 +36,7 @@ namespace MOSSimulator
             LENGTH = new byte[2];
             EVEN = false;
             CHECKSUM1 = 0;
-            DATA = new byte[LD_DATA_SIZE_OUT /*+ 2*/];//почему +2 ? надо просто LD_DATA_SIZE_OUT !
+            DATA = new byte[LD_DATA_SIZE_OUT];//LD_DATA_SIZE_OUT
             for (int i = 0; i < DATA.Length; i++)
                 DATA[i] = 0;
 
