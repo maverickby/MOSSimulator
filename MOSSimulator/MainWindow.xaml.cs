@@ -3543,9 +3543,11 @@ namespace MOSSimulator
                 //далее цикл повторяется.  
 
                 tagUartReceivedInterm = getTagUartReceived();
-                //Debug.WriteLine("---> MainWindow.InitSendCommand(), tagUartReceived: {0}.", tagUartReceivedInterm);                
+                //Debug.WriteLine("---> MainWindow.InitSendCommand(), tagUartReceived: {0}.", tagUartReceivedInterm); 
+                               
                 if (getTagUartReceived() == true)
                         cycleIndex++;
+
                 if (tagUartReceivedInterm != getTagUartReceived())//здесь уже произошел прием пакета данных
                 {
                     //Debug.WriteLine("< -- ZOMG !!! MainWindow.InitSendCommand(), tagUartReceived: {0}.", getTagUartReceived());
@@ -3553,7 +3555,7 @@ namespace MOSSimulator
                 }
                 if (cycleIndex > 7)
                         cycleIndex = 0;
-                tagUartReceivedInterm = getTagUartReceived();
+                //tagUartReceivedInterm = getTagUartReceived();
             }
                 //}));            
         }
