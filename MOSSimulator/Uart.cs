@@ -58,10 +58,10 @@ namespace MOSSimulator
 
             //command_in = new ReceivedCommand(1);
 
-            timer = new Multimedia.Timer();
-            timer.Stop();
-            timer.Period = 1;
-            timer.Resolution = 0;
+            //timer = new Multimedia.Timer();
+            //timer.Stop();
+            //timer.Period = 1;
+            //timer.Resolution = 0;
             //timer.Tick += timer_Tick;
 
             active = false;
@@ -94,7 +94,7 @@ namespace MOSSimulator
             {
                 active = false;
                 //while (timer.IsRunning) ;
-                timer.Stop();
+                //timer.Stop();
                 uart.Close();
                 return !uart.IsOpen;
             }
@@ -172,14 +172,14 @@ namespace MOSSimulator
                     {
                         //command_in.START = (byte)uart.ReadByte();
                         START = (byte)uart.ReadByte();
-                        if (/*command_in.START*/START == 0x5a)
+                        if (START == 0x5a)
                             state_rx = STATE_RX.ADDRESS;
                         else
                         {
                             //неправильный стартовый байт
                             command_in = new Cmd();
                             command_in.result = CmdResult.BAD_START_BYTE;
-                            timer.Stop();
+                            //timer.Stop();
                             uart.DiscardInBuffer();
                             //вызов метода uart_received(Cmd com_in) в MainWindow через делегат RcvdMsg для отображения информации
                             received(command_in);
@@ -273,13 +273,13 @@ namespace MOSSimulator
                             command_in.result = CmdResult.SUCCESS;
                         }
 
-                        timer.Stop();
+                        //timer.Stop();
                         uart.DiscardInBuffer();
                         received(command_in);//Возбуждаем событие received и передаем ему данные, прием в MainWindow.uart_received() 
                     }
                 }
             }
-            catch (OverflowException)
+            /*catch (OverflowException)
             {
                 Debug.WriteLine("DataReceived() OverflowException error, data_length * 2 > uart.BytesToRead()");
                 Debug.WriteLine("time: {0}.", DateTime.Now);
@@ -290,21 +290,21 @@ namespace MOSSimulator
                 Debug.WriteLine("time: {0}.", DateTime.Now);
                 //Console.WriteLine("Error reading data: {0}.",
                 //  exc.GetType().Name);
-            }
+            }*/
             catch (Exception exc)
             {
                 Debug.WriteLine("DataReceived() Exception error", exc.ToString());
                 Debug.WriteLine("time: {0}.", DateTime.Now);
             }
 
-            if (time <= 0)
+            /*if (time <= 0)
             {
                 command_in.result = CmdResult.TIMEOUT;
                 timer.Stop();
                 uart.DiscardInBuffer();
                 received(command_in);//Возбуждаем событие received и передаем ему данные, прием в MainWindow.uart_received()
             }
-            time -= (uint)timer.Period;
+            time -= (uint)timer.Period;*/
             return;
         }
 
@@ -472,8 +472,8 @@ namespace MOSSimulator
                     //command_in = new Cmd();
 
                     state_rx = STATE_RX.START;
-                    time = timeout;
-                    timer.Start();
+                    //time = timeout;
+                    //timer.Start();
                 }
 
                 //if (!uart.IsOpen) uart.Close();

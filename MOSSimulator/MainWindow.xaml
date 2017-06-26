@@ -113,7 +113,7 @@
         <ComboBox x:Name="cbComPorts" HorizontalAlignment="Left" Margin="85,8,0,0" Grid.Row="1" VerticalAlignment="Top" Width="69"/>
         <Button x:Name="buttonStart" Content="Старт обмена" HorizontalAlignment="Left" Margin="173,10,0,0" Grid.Row="1" VerticalAlignment="Top" Width="86" Click="buttonStart_Click"/>
         <CheckBox x:Name="chbCycleMode" Content="Циклическая отправка" HorizontalAlignment="Left" Margin="277,13,0,0" Grid.Row="1" VerticalAlignment="Top" IsChecked="True" Width="152"/>
-        <StatusBar HorizontalAlignment="Left" Height="35" Margin="0,965,-12,0" Grid.Row="1" VerticalAlignment="Top" Width="1924">
+        <StatusBar HorizontalAlignment="Left" Height="35" Margin="0,965,0,-16" Grid.Row="1" VerticalAlignment="Top" Width="1912">
             <Label x:Name="lblStatusUART" Content="Статус обмена: " Width="178"/>
             <Label x:Name="lblNumPacks" Content="Послано пакетов: " Width="182"/>
             <Label x:Name="lblSuccess" Content="Усп. пакетов: " Width="159"/>

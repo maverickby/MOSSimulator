@@ -122,6 +122,7 @@ namespace MOSSimulator
         bool[] JoystickKeyboardsStates;
 
         bool[] activeDevicesArr;
+        bool[] arrayActiveDevicesInCycle;
 
         byte Cin, Cout;
         bool TVK1DataChanged;
@@ -256,6 +257,11 @@ namespace MOSSimulator
             activeDevicesArr = new bool[5];
             for (int i = 0; i < 5; i++)
                 activeDevicesArr[i] = false;
+
+            arrayActiveDevicesInCycle = new bool[8];
+            for (int i = 0; i < 8; i++)
+                arrayActiveDevicesInCycle[i] = false;
+            
         }
         private void Log_Click(object sender, RoutedEventArgs e)
         {
@@ -496,7 +502,10 @@ namespace MOSSimulator
                         return null;
                     }
                 }
-                catch (Exception ex) { MessageBox.Show(ex.Message); }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
             }
             else//порт открыт, остановка
             {
@@ -523,6 +532,7 @@ namespace MOSSimulator
                     //tmrExchange.Stop();
 
                     uartThread.Abort();
+                    uartThread.Join();
                     cycleIndex = 0;
                     setTagUartReceived(true);
                     uart.Close();
@@ -556,8 +566,6 @@ namespace MOSSimulator
         //чтение данных из порта
         void uart_received(Cmd com_in)
         {
-            //lock (locker)
-            {
                 //Dispatcher.BeginInvoke(new Action(delegate
                 //{       //BeginInvoke т.к. прием по возбуждению события received в Uart
                 switch (com_in.result)
@@ -585,11 +593,14 @@ namespace MOSSimulator
                         break;
                 }
 
-                /*lblSuccess.Content = String.Format("Усп. пакетов - {0}", cntSuccess.ToString());
+            Dispatcher.BeginInvoke(new Action(delegate
+            {
+                lblSuccess.Content = String.Format("Усп. пакетов - {0}", cntSuccess.ToString());
                 lblStatusUART.Content = String.Format("Статус обмена - {0}", com_in.result.ToString());
                 lblStartErrors.Content = String.Format("Ошибки старт. байта - {0}", cntStartErrors.ToString());
                 lblErrorChkSums.Content = String.Format("Ошибки контр. суммы - {0}", cntChkSums.ToString());
-                lblTimeOuts.Content = String.Format("Превыш. времени ожидания - {0}", cntTimeOuts.ToString());*/
+                lblTimeOuts.Content = String.Format("Превыш. времени ожидания - {0}", cntTimeOuts.ToString()); 
+             }));
 
                 //проверка на отсутствие блока данных                
                 if (BitConverter.ToUInt16(com_in.LENGTH, 0) == 0)
@@ -599,8 +610,11 @@ namespace MOSSimulator
                 //режим работы привода азимута
                 if (MUGSPInfExchangeONOFF && (cycleIndex == 0 || cycleIndex == 2 || cycleIndex == 4 || cycleIndex == 6))
                 {
-                    int index = com_in.DATA[0];
+                    int index = com_in.DATA[0];                    
 
+                Dispatcher.BeginInvoke(new Action(delegate
+                {
+                    tbErrors.Text = "";
                     switch ((int)com_in.DATA[0])
                     {
                         case 0x00:
@@ -831,6 +845,7 @@ namespace MOSSimulator
                     }
 
                     tbErrors.Text = str_err;
+                }));
 
                     ShowBuf(com_in.GetBufToSend(), false);
                     setTagUartReceived(true);
@@ -841,6 +856,7 @@ namespace MOSSimulator
                 if (TVK1InfExchangeONOFF && cycleIndex == 1)
                 {
                     string strStatusTVK1 = "";
+                
                     //состояние READY
                     byte[] byteArr = new byte[1];
                     byte[] byteArr2 = new byte[1];
@@ -850,23 +866,28 @@ namespace MOSSimulator
                     BitArray bitArray = new BitArray(byteArr);
                     BitArray bitArray2 = new BitArray(byteArr2);
 
-                    if (!bitArray.Get(2))
-                        textBoxTVK1VIDEO_IN_STATE.Text += "данные не принимаются \n";
-                    else
-                        textBoxTVK1VIDEO_IN_STATE.Text += "данные принимаются \n";
-                    if (bitArray.Get(3))
-                        textBoxTVK1VIDEO_OUT_STATE_IN.Text += "данные не передаются\n";
-                    else
-                        textBoxTVK1VIDEO_OUT_STATE_IN.Text += "данные передаются\n";
+                    Dispatcher.BeginInvoke(new Action(delegate
+                    {
+                        textBoxTVK1VIDEO_IN_STATE.Text = "";
+                        textBoxTVK1VIDEO_OUT_STATE_IN.Text = "";
+                        if (!bitArray.Get(2))
+                            textBoxTVK1VIDEO_IN_STATE.Text += "данные не принимаются \n";
+                        else
+                            textBoxTVK1VIDEO_IN_STATE.Text += "данные принимаются \n";
+                        if (bitArray.Get(3))
+                            textBoxTVK1VIDEO_OUT_STATE_IN.Text += "данные не передаются\n";
+                        else
+                            textBoxTVK1VIDEO_OUT_STATE_IN.Text += "данные передаются\n";
 
-                    if (tvk1StatusWindow != null)
-                        tvk1StatusWindow.fillData(strStatusTVK1);
+                        if (tvk1StatusWindow != null)
+                            tvk1StatusWindow.fillData(strStatusTVK1);
+                    }));
                     setTagUartReceived(true);
                 }
                 //ТВК 2
                 if (TVK2InfExchangeONOFF && cycleIndex == 3)
                 {
-                    string strStatusTVK2 = "";
+                    string strStatusTVK2 = "";                    
                     //состояние READY
                     byte[] byteArr = new byte[1];
                     byte[] byteArr2 = new byte[1];
@@ -876,18 +897,24 @@ namespace MOSSimulator
                     BitArray bitArray = new BitArray(byteArr);
                     BitArray bitArray2 = new BitArray(byteArr2);
 
-                    /*if (!bitArray.Get(0))
-                        textBoxTVK2READY_IN.Text += "камера выключена или не принимается видеоинформация\n";
-                    else
-                        textBoxTVK2READY_IN.Text += "камера включена и данные принимаются верно\n";
-                    //VIDEO_OUT_STATE
-                    if (bitArray.Get(0))
-                        textBoxTVK2VIDEO_OUT_STATE_IN.Text += "данные не передаются\n";
-                    else
-                        textBoxTVK2VIDEO_OUT_STATE_IN.Text += "данные передаются\n";*/
+                    Dispatcher.BeginInvoke(new Action(delegate
+                    {
+                        textBoxTVK2READY_IN.Text = "";
+                        textBoxTVK2VIDEO_OUT_STATE_IN.Text = "";
+                        if (!bitArray.Get(0))
+                            textBoxTVK2READY_IN.Text += "камера выключена или не принимается видеоинформация\n";
+                        else
+                            textBoxTVK2READY_IN.Text += "камера включена и данные принимаются верно\n";
+                        //VIDEO_OUT_STATE
+                        if (bitArray.Get(0))
+                            textBoxTVK2VIDEO_OUT_STATE_IN.Text += "данные не передаются\n";
+                        else
+                            textBoxTVK2VIDEO_OUT_STATE_IN.Text += "данные передаются\n";
+                    
 
                     if (tvk2StatusWindow != null)
                         tvk2StatusWindow.fillData(strStatusTVK2);
+                    }));
                     setTagUartReceived(true);
                     //Debug.WriteLine("ТВК2-- MainWindow.uart_received(), cycleIndex: {0}.", cycleIndex);
                     //Debug.WriteLine("ТВК2-- MainWindow.uart_received(), tagUartReceived: {0}.", getTagUartReceived());
@@ -905,12 +932,16 @@ namespace MOSSimulator
                     BitArray bitArray = new BitArray(byteArr);
                     BitArray bitArray2 = new BitArray(byteArr2);
 
-                    if (!bitArray.Get(0))
-                        textBoxTPVKREADY_IN.Text += "0\n";
-                    else
-                        textBoxTPVKREADY_IN.Text += "1\n";
-                    if (tpvkStatusWindow != null)
-                        tpvkStatusWindow.fillData(strStatusTPVK);
+                    Dispatcher.BeginInvoke(new Action(delegate
+                    {
+                        textBoxTPVKREADY_IN.Text = "";
+                        if (!bitArray.Get(0))
+                            textBoxTPVKREADY_IN.Text += "0\n";
+                        else
+                            textBoxTPVKREADY_IN.Text += "1\n";
+                        if (tpvkStatusWindow != null)
+                            tpvkStatusWindow.fillData(strStatusTPVK);
+                    }));
                     setTagUartReceived(true);
                 }
                 //ЛД
@@ -926,7 +957,9 @@ namespace MOSSimulator
                     BitArray bitArray2 = new BitArray(byteArr2);
                     string strStatusLD = "";
 
-                    /*textBoxLDSOST_IN.Text = "";
+                Dispatcher.BeginInvoke(new Action(delegate
+                {
+                    textBoxLDSOST_IN.Text = "";
                     if (!bitArray.Get(0) && !bitArray.Get(1) && !bitArray.Get(2))
                         textBoxLDSOST_IN.Text += "Подготовка к работе\n";
                     if (bitArray.Get(0) && !bitArray.Get(1) && !bitArray.Get(2))
@@ -934,7 +967,7 @@ namespace MOSSimulator
                     if (!bitArray.Get(0) && bitArray.Get(1) && !bitArray.Get(2))
                         textBoxLDSOST_IN.Text += "Идет цикл измерения дальности\n";
                     if (bitArray.Get(0) && bitArray.Get(1) && !bitArray.Get(2))
-                        textBoxLDSOST_IN.Text += "Дальномер неисправен\n";*/
+                        textBoxLDSOST_IN.Text += "Дальномер неисправен\n";
 
                     strStatusLD = "";
                     if (!bitArray.Get(4) && !bitArray.Get(5) && !bitArray.Get(6) && !bitArray.Get(7))
@@ -1014,6 +1047,7 @@ namespace MOSSimulator
 
                     if (ldStatusWindow != null)
                         ldStatusWindow.fillData(strStatusLD);
+                }));
                     setTagUartReceived(true);
                     //Debug.WriteLine("ЛД-- MainWindow.uart_received(), cycleIndex: {0}.", cycleIndex);
                     //Debug.WriteLine("ЛД-- MainWindow.uart_received(), tagUartReceived: {0}.", getTagUartReceived());
@@ -1029,7 +1063,6 @@ namespace MOSSimulator
 
                 //now SEND COMMAND immediately ! (not using tmrExchange)
                 //InitSendCommand();
-            }
         }
 
         public void ControlChanged(object sender, EventArgs e)
@@ -1306,8 +1339,10 @@ namespace MOSSimulator
 
         private void checkBoxLDONOFF_Unchecked(object sender, RoutedEventArgs e)
         {
-            cycleIndex = 0;
+            //cycleIndex = 0;
             setTagUartReceived(true);
+            arrayActiveDevicesInCycle[7] = false;
+            activeDevicesArr[4] = false;
             ControlChanged(sender, e);
         }
 
@@ -1608,6 +1643,11 @@ namespace MOSSimulator
         {
             cycleIndex = 0;
             setTagUartReceived(true);
+            arrayActiveDevicesInCycle[0] = true;
+            arrayActiveDevicesInCycle[2] = true;
+            arrayActiveDevicesInCycle[4] = true;
+            arrayActiveDevicesInCycle[6] = true;
+            activeDevicesArr[0] = true;
             ControlChanged(sender, e);
         }
 
@@ -1618,22 +1658,28 @@ namespace MOSSimulator
 
         private void checkBoxmTVK2InfExchangeONOFF_Checked(object sender, RoutedEventArgs e)
         {
-            cycleIndex = 0;
+            //cycleIndex = 0;
             setTagUartReceived(true);
+            arrayActiveDevicesInCycle[3] = true;
+            activeDevicesArr[2] = true;
             ControlChanged(sender, e);
         }
 
         private void checkBoxmTVK1InfExchangeONOFF_Checked(object sender, RoutedEventArgs e)
         {
-            cycleIndex = 0;
+            //cycleIndex = 0;
             setTagUartReceived(true);
+            arrayActiveDevicesInCycle[1] = true;
+            activeDevicesArr[1] = true;
             ControlChanged(sender, e);
         }
 
         private void checkBoxTPVKInfExchangeONOFF_Checked(object sender, RoutedEventArgs e)
         {
-            cycleIndex = 0;
+            //cycleIndex = 0;
             setTagUartReceived(true);
+            arrayActiveDevicesInCycle[5] = true;
+            activeDevicesArr[3] = true;
             ControlChanged(sender, e);
         }
 
@@ -1854,6 +1900,7 @@ namespace MOSSimulator
             {
                 uart.DesetFalse();
                 uartThread.Abort();
+                uartThread.Join();
                 cycleIndex = 0;
                 setTagUartReceived(true);
                 uart.Close();
@@ -1990,8 +2037,10 @@ namespace MOSSimulator
 
         private void checkBoxmLDInfExchangeONOFF(object sender, RoutedEventArgs e)
         {
-            cycleIndex = 0;
+            //cycleIndex = 0;
             setTagUartReceived(true);
+            arrayActiveDevicesInCycle[7] = true;
+            activeDevicesArr[4] = true;
             ControlChanged(sender, e);
         }
 
@@ -2000,6 +2049,7 @@ namespace MOSSimulator
             cycleIndex = 0;
             setTagUartReceived(true);
             sliderTVK2CONTRAST_GAIN.Value = (int)numTVK2CONTRAST_GAIN.Value;
+            arrayActiveDevicesInCycle[0] = true;
             ControlChanged(sender, e);
         }
 
@@ -2442,13 +2492,22 @@ namespace MOSSimulator
 
         private void checkBoxmMUGSPInfExchangeONOFF_Unchecked(object sender, RoutedEventArgs e)
         {
+            arrayActiveDevicesInCycle[0] = false;
+            arrayActiveDevicesInCycle[2] = false;
+            arrayActiveDevicesInCycle[4] = false;
+            arrayActiveDevicesInCycle[6] = false;
+            activeDevicesArr[0] = false;
+            cycleIndex = 0;
+            setTagUartReceived(true);
             ControlChanged(sender, e);
         }
 
         private void checkBoxmTVK2InfExchangeONOFF_Unchecked(object sender, RoutedEventArgs e)
         {
-            cycleIndex = 0;
+            //cycleIndex = 0;
             setTagUartReceived(true);
+            arrayActiveDevicesInCycle[3] = false;
+            activeDevicesArr[2] = false;
             ControlChanged(sender, e);
         }
 
@@ -2464,11 +2523,17 @@ namespace MOSSimulator
 
         private void checkBoxmTVK1InfExchangeONOFF_Unchecked(object sender, RoutedEventArgs e)
         {
+            setTagUartReceived(true);
+            arrayActiveDevicesInCycle[1] = false;
+            activeDevicesArr[1] = false;
             ControlChanged(sender, e);
         }
 
         private void checkBoxTPVKInfExchangeONOFF_Unchecked(object sender, RoutedEventArgs e)
         {
+            setTagUartReceived(true);
+            arrayActiveDevicesInCycle[5] = false;
+            activeDevicesArr[3] = false;
             ControlChanged(sender, e);
         }
 
@@ -2619,7 +2684,7 @@ namespace MOSSimulator
                 {
                     if (uart == null)
                         return;
-                    if (!getTagUartReceived()) Thread.Sleep(1);
+                    //if (!getTagUartReceived()) Thread.Sleep(1);
 
                     numOfPocket++;
 
@@ -3102,9 +3167,12 @@ namespace MOSSimulator
                         ushort chksm2 = (ushort)CheckSumRFC1071(buf_chksum_all, 24);
                         comTVK1.CHECKSUM2 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_all, 24));
 
-                        //lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
+                    Dispatcher.BeginInvoke(new Action(delegate
+                    {
+                        lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
+                    }));
 
-                        uart.SendCommand(comTVK1);
+                    uart.SendCommand(comTVK1);
                         if (!isThereAnotherActiveDevice(cycleIndex))
                             setTagUartReceived(false);
                         //tagUartReceivedInterm = false;
@@ -3299,7 +3367,10 @@ namespace MOSSimulator
                         ushort chksm2 = (ushort)CheckSumRFC1071(buf_chksum_all, 28);
                         comTVK2.CHECKSUM2 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_all, 28));
 
-                        //lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
+                        Dispatcher.BeginInvoke(new Action(delegate
+                        {
+                            lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
+                        }));
 
                         uart.SendCommand(comTVK2);
                         if (!isThereAnotherActiveDevice(cycleIndex))
@@ -3401,7 +3472,10 @@ namespace MOSSimulator
                         ushort chksm2 = (ushort)CheckSumRFC1071(buf_chksum_all, 19);
                         comTPVK.CHECKSUM2 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_all, 19));
 
+                    Dispatcher.BeginInvoke(new Action(delegate
+                    {
                         lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
+                    }));
 
                         uart.SendCommand(comTPVK);
                         if (!isThereAnotherActiveDevice(cycleIndex))
@@ -3515,17 +3589,20 @@ namespace MOSSimulator
                         ushort chksm2 = (ushort)CheckSumRFC1071(buf_chksum_all, 10);
                         comLD.CHECKSUM2 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_all, 10));
 
-                        //lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
+                        Dispatcher.BeginInvoke(new Action(delegate
+                        {
+                            lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
+                        }));
 
-                        uart.SendCommand(comLD);
+                    uart.SendCommand(comLD);
                         //Thread.Sleep(1);//поспим и подождем приема пакета
                         if(!isThereAnotherActiveDevice(cycleIndex))
-                            setTagUartReceived(false);
-                        //tagUartReceivedInterm = false;
-                        //Debug.WriteLine("ЛД -- MainWindow.InitSendCommand(), cycleIndex: {0}.", cycleIndex);
-                        //Debug.WriteLine("ЛД -- MainWindow.InitSendCommand(), tagUartReceived: {0}.", getTagUartReceived());
+                            setTagUartReceived(false); //tagUartReceived устанавливаем в false при ПЕРЕДАЧЕ пакета и ЖДЕМ приема пакета !
+                         //tagUartReceivedInterm = false;
+                         //Debug.WriteLine("ЛД -- MainWindow.InitSendCommand(), cycleIndex: {0}.", cycleIndex);
+                         //Debug.WriteLine("ЛД -- MainWindow.InitSendCommand(), tagUartReceived: {0}.", getTagUartReceived());
 
-                        currentDevice = Device.MU_GSP;
+                         currentDevice = Device.MU_GSP;
                     }//ЛД END
                 //}
 
@@ -3577,7 +3654,7 @@ namespace MOSSimulator
         bool isThereAnotherActiveDevice(int currIndex)
         {
             for (int i = 0; i < 5; i++)
-                if (i != currIndex && activeDevicesArr[i] == true)
+                if (i != currIndex && arrayActiveDevicesInCycle[i] == true)
                     return true;
             return false;
         }
