@@ -452,7 +452,7 @@ namespace MOSSimulator
             if (uart == null)
                 uart = new Uart();
 
-            if (uart.isOpen() == false)//если порт закрыт, стартуем
+            if (uart.isOpen() == false)//если порт закрыт, старт
             {
                 try
                 {
@@ -509,7 +509,34 @@ namespace MOSSimulator
             }
             else//порт открыт, остановка
             {
-                if((bool)chbCycleMode.IsChecked == false)//порт открыт И однократная посылка
+                if((bool)chbCycleMode.IsChecked == true)
+                {
+                    uart.DesetFalse();
+                    cntStartErrors = 0; cntTimeOuts = 0; cntChkSums = 0; numOfPocket = 0; cntSuccess = 0;
+
+                    //while (tmrExchange.IsRunning)
+                    //    DoEvents(); //Application.DoEvents();
+                    //tmrExchange.Stop();
+
+                    uartThread.Abort();
+                    uartThread.Join();
+                    cycleIndex = 0;
+                    setTagUartReceived(true);
+                    uart.Close();
+
+                    lblSuccess.Content = String.Format("Усп. пакетов - {0}", cntSuccess.ToString());
+                    lblStatusUART.Content = String.Format("Статус обмена - {0}", "");
+                    lblStartErrors.Content = String.Format("Ошибки старт. байта - {0}", cntStartErrors.ToString());
+                    lblErrorChkSums.Content = String.Format("Ошибки контр. суммы - {0}", cntChkSums.ToString());
+                    lblTimeOuts.Content = String.Format("Превыш. времени ожидания - {0}", cntTimeOuts.ToString());
+                    lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
+
+                    buttonStart.Content = "Старт";
+                    buttonStart.Background = Brushes.LightGray;
+                    cbComPorts.IsEnabled = true;
+                    uart = null;                  
+                }
+                else//порт открыт И однократная посылка
                 {
                     cntStartErrors = 0; cntTimeOuts = 0; cntChkSums = 0; numOfPocket = 0; cntSuccess = 0;
                     uart.received += uart_received;
@@ -521,27 +548,8 @@ namespace MOSSimulator
                     InitSendCommand();
                     //tmrExchange.Period = 1;
                     //tmrExchange.Mode = Multimedia.TimerMode.OneShot;
-                    //tmrExchange.Start();                    
+                    //tmrExchange.Start();  
                 }
-                else//порт открыт, остановка
-                {
-                    uart.DesetFalse();
-                    //while (tmrExchange.IsRunning)
-                    //    DoEvents(); //Application.DoEvents();
-
-                    //tmrExchange.Stop();
-
-                    uartThread.Abort();
-                    uartThread.Join();
-                    cycleIndex = 0;
-                    setTagUartReceived(true);
-                    uart.Close();
-
-                    buttonStart.Content = "Старт";
-                    buttonStart.Background = Brushes.LightGray;
-                    cbComPorts.IsEnabled = true;
-                    uart = null;
-                }                
             }
 
             return uart;
@@ -906,18 +914,32 @@ namespace MOSSimulator
                         else
                             textBoxTVK2READY_IN.Text += "камера включена и данные принимаются верно\n";
                         //VIDEO_OUT_STATE
-                        if (bitArray.Get(0))
+                        if (!bitArray.Get(1))
                             textBoxTVK2VIDEO_OUT_STATE_IN.Text += "данные не передаются\n";
                         else
                             textBoxTVK2VIDEO_OUT_STATE_IN.Text += "данные передаются\n";
-                    
 
-                    if (tvk2StatusWindow != null)
+                        
+                        if (!bitArray.Get(2))
+                            strStatusTVK2 += "Режим экспозиции: 0 - автоматический\n";
+                        else
+                            strStatusTVK2 += "Режим экспозиции: 1 - ручной\n";
+                        if (!bitArray.Get(3))
+                            strStatusTVK2 += "Режим контрастирования: 0 - автоматический\n";
+                        else
+                            strStatusTVK2 += "Режим контрастирования: 1 - ручной\n";
+                        if (!bitArray.Get(4)&& !bitArray.Get(5))
+                            strStatusTVK2 += "Режим захвата изображения: 0 - видео, вся матрица с биннингом\n";
+                        if (bitArray.Get(4) && !bitArray.Get(5))
+                            strStatusTVK2 += "Режим захвата изображения: 1 - видео, центральная часть матрицы\n";
+                        if (!bitArray.Get(4) && bitArray.Get(5))
+                            strStatusTVK2 += "Режим захвата изображения: 2 - фото, вся матрица пиксель в пиксель\n";
+
+
+                        if (tvk2StatusWindow != null)
                         tvk2StatusWindow.fillData(strStatusTVK2);
                     }));
                     setTagUartReceived(true);
-                    //Debug.WriteLine("ТВК2-- MainWindow.uart_received(), cycleIndex: {0}.", cycleIndex);
-                    //Debug.WriteLine("ТВК2-- MainWindow.uart_received(), tagUartReceived: {0}.", getTagUartReceived());
                 }
                 //ТПВК
                 if (TPVKInfExchangeONOFF && cycleIndex == 5)
@@ -1432,8 +1454,6 @@ namespace MOSSimulator
 
         private void buttonLDGetState_Click(object sender, RoutedEventArgs e)
         { 
-           // bool disp = IsDisposed(ldStatusWindow);
-
             if (ldStatusWindow == null || IsDisposed(ldStatusWindow)== true)
                ldStatusWindow = new StatusWindow();
             ldStatusWindow.Title = "Состояние ЛД";
@@ -2677,964 +2697,955 @@ namespace MOSSimulator
         /// заполнение отправляемого пакета
         /// </summary>
         private void InitSendCommand()
-        {            
-            //Dispatcher.BeginInvoke(new Action(delegate
-            //{
-                while (true)
-                {
-                    if (uart == null)
-                        return;
-                    //if (!getTagUartReceived()) Thread.Sleep(1);
-
-                    numOfPocket++;
-
-                    //МУ ГСП            
-                    if (MUGSPInfExchangeONOFF && getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 0)
-                    {
-                        com.DiscardDataBuf();
-                        byte[] buf_chksum_header = new byte[4];
-                        byte[] buf_chksum_all = new byte[16];//полная длина пакета 18 - 2 байта (длина чексуммы 2)
-
-                        com.START = st_out.START;
-                        com.ADDRESS = st_out.ADDRESS;
-                        com.LENGTH[0] = 5;
-                        com.LENGTH[1] = 0;
-
-                        buf_chksum_header[0] = com.START;
-                        buf_chksum_header[1] = com.ADDRESS;
-                        buf_chksum_header[2] = com.LENGTH[0];
-                        buf_chksum_header[3] = com.LENGTH[1];
-
-                        ushort chksm = (ushort)CheckSumRFC1071(buf_chksum_header, 4);
-                        com.CHECKSUM1 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_header, 4));
-
-                        com.DATA[0] = st_out.MODE_AZ;
-                        com.DATA[1] = st_out.MODE_EL;
-                        com.DATA[2] = st_out.INPUT_AZ[0];
-                        com.DATA[3] = st_out.INPUT_AZ[1];
-                        com.DATA[4] = st_out.INPUT_AZ[2];
-                        com.DATA[5] = st_out.INPUT_EL[0];
-                        com.DATA[6] = st_out.INPUT_EL[1];
-                        com.DATA[7] = st_out.INPUT_EL[2];
-
-                        sbyte byte9 = 0;
-
-                        if (st_out.ECO_MODE)
-                            byte9 |= 1 << 0;
-                        else
-                            byte9 &= ~(1 << 0);
-
-                        if (st_out.RESET)
-                            byte9 |= 1 << 1;
-                        else
-                            byte9 &= ~(1 << 1);
-
-
-                        com.DATA[8] = (byte)byte9;
-
-                        com.DATA[9] = st_out.RESERVE2;
-
-                        buf_chksum_all[0] = com.START;
-                        buf_chksum_all[1] = com.ADDRESS;
-                        buf_chksum_all[2] = com.LENGTH[0];
-                        buf_chksum_all[3] = com.LENGTH[1];
-
-                        byte[] byteArray = BitConverter.GetBytes(chksm);
-
-                        buf_chksum_all[4] = byteArray[1];
-                        buf_chksum_all[5] = byteArray[0];
-
-                        buf_chksum_all[6] = com.DATA[0];
-                        buf_chksum_all[7] = com.DATA[1];
-                        buf_chksum_all[8] = com.DATA[2];
-                        buf_chksum_all[9] = com.DATA[3];
-                        buf_chksum_all[10] = com.DATA[4];
-                        buf_chksum_all[11] = com.DATA[5];
-                        buf_chksum_all[12] = com.DATA[6];
-                        buf_chksum_all[13] = com.DATA[7];
-                        buf_chksum_all[14] = com.DATA[8];
-                        buf_chksum_all[15] = com.DATA[9];
-
-                        ushort chksm2 = (ushort)CheckSumRFC1071(buf_chksum_all, 16);
-                        com.CHECKSUM2 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_all, 16));
-
-                        //lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
-
-                        uart.SendCommand(com);
-                        if (!isThereAnotherActiveDevice(cycleIndex))
-                            setTagUartReceived(false);
-                        //tagUartReceivedInterm = false;
-
-                    //если была однократная посылка - остановить таймер передачи и НЕ закрывать uart  !
-                    /*if (!(bool)chbCycleMode.IsChecked)
-                    {
-                        //uart.DesetFalse();  //--- оставить active в true
-
-                        tmrExchange.Stop();
-                        //uart.Close();
-
-                        buttonStart.Content = "Старт";
-                        buttonStart.Background = Brushes.LightGray;
-                        cbComPorts.IsEnabled = true;
-                        //uart = null;
-                    }*/
-
-                    currentDevice = Device.TVK1;
-                    }
-                    //МУ ГСП END
-
-                    //ТВК1
-                    if (/*TVK1DataChanged && */TVK1InfExchangeONOFF && getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 1)
-                    {
-                        comTVK1.DiscardDataBuf();
-                        byte[] buf_chksum_header = new byte[4];
-                        byte[] buf_chksum_all = new byte[24];//полная длина пакета 26 - 2 байта (длина чексуммы 2)
-
-
-                        comTVK1.START = st_out.START;
-                        comTVK1.ADDRESS = 12;
-                        comTVK1.LENGTH[0] = 9;//длина пакета 18 байт для камеры Sony (У + Cin + ТВК1 PACKET (16 байт))
-                        comTVK1.LENGTH[1] = 0;
-
-                        buf_chksum_header[0] = comTVK1.START;
-                        buf_chksum_header[1] = comTVK1.ADDRESS;
-                        buf_chksum_header[2] = comTVK1.LENGTH[0];
-                        buf_chksum_header[3] = comTVK1.LENGTH[1];
-
-                        ushort chksm = (ushort)CheckSumRFC1071(buf_chksum_header, 4);
-                        comTVK1.CHECKSUM1 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_header, 4));
-
-                        if (Cin == 255)
-                            Cin = 0;
-
-                        ////Управляющий байт блока управления камерой (байт 0)
-                        //if (!camZoomTeleVariableSend && !camZoomWideVariableSend && !camZoomStopSend &&
-                        //    !camFocusFarVariableSend && !camFocusNearVariableSend && !camFocusStopSend)
-                        {
-                            BitArray bitArray = new BitArray(8);
-                            bitArray.SetAll(false);
-
-                            if (st_outTVK1.POWER == true)
-                            {
-                                bitArray.Set(0, true);
-                                //TVK1DataChanged = false;
-                            }
-                            else
-                            {
-                                bitArray.Set(0, false);
-                                //TVK1DataChanged = false;
-                            }
-                            if (st_outTVK1.RESET == true)
-                            {
-                                bitArray.Set(1, true);
-                                //TVK1DataChanged = false;
-                            }
-                            else
-                            {
-                                bitArray.Set(1, false);
-                                //TVK1DataChanged = false;
-                            }
-                            if (st_outTVK1.VIDEO_IN_EN == true)
-                            {
-                                bitArray.Set(2, true);
-                                //TVK1DataChanged = false;
-                            }
-                            else
-                            {
-                                bitArray.Set(2, false);
-                                //TVK1DataChanged = false;
-                            }
-                            if (st_outTVK1.VIDEO_OUT_EN == true)
-                            {
-                                bitArray.Set(3, true);
-                                //TVK1DataChanged = false;
-                            }
-                            else
-                            {
-                                bitArray.Set(3, false);
-                                //TVK1DataChanged = false;
-                            }
-
-                            comTVK1.DATA[0] = ConvertToByte(bitArray);//Управляющий байт
-                        }
-
-                        if (camZoomTeleVariableSend)
-                        {
-                            if (TVK1DataChanged)
-                                comTVK1.DATA[1] = ++Cin;
-                            comTVK1.DATA[2] = 0x81;
-                            comTVK1.DATA[3] = 0x01;
-                            comTVK1.DATA[4] = 0x04;
-                            comTVK1.DATA[5] = 0x07;
-
-                            //get p 4 bits value
-                            byte iValZoomTeleVariableP = (byte)numTVK1ZoomTeleVariableP.Value;
-                            byte[] myBytes = new byte[1];
-                            myBytes[0] = iValZoomTeleVariableP;
-                            BitArray bitArrayZoom = new BitArray(myBytes);
-                            BitArray byte0 = new BitArray(8);
-                            //set p
-                            byte0.Set(0, bitArrayZoom.Get(0));
-                            byte0.Set(1, bitArrayZoom.Get(1));
-                            byte0.Set(2, bitArrayZoom.Get(2));
-                            byte0.Set(3, bitArrayZoom.Get(3));
-                            //set 2
-                            byte0.Set(4, false);
-                            byte0.Set(5, true);
-                            byte0.Set(6, false);
-                            byte0.Set(7, false);
-
-                            byte byteRes0 = ConvertToByte(byte0);
-
-                            comTVK1.DATA[6] = byteRes0;
-
-                            //comTVK1.DATA[6] = 0x02;
-                            comTVK1.DATA[7] = 0xFF;
-                            TVK1DataChanged = false;
-                        }
-                        if (camZoomWideVariableSend)
-                        {
-                            if (TVK1DataChanged)
-                                comTVK1.DATA[1] = ++Cin;
-                            comTVK1.DATA[2] = 0x81;
-                            comTVK1.DATA[3] = 0x01;
-                            comTVK1.DATA[4] = 0x04;
-                            comTVK1.DATA[5] = 0x07;
-                            //get p 4 bits value
-                            byte iValZoomTeleVariableP = (byte)numTVK1ZoomTeleVariableP.Value;
-                            byte[] myBytes = new byte[1];
-                            myBytes[0] = iValZoomTeleVariableP;
-                            BitArray bitArrayZoom = new BitArray(myBytes);
-                            BitArray byte0 = new BitArray(8);
-                            //set p
-                            byte0.Set(0, bitArrayZoom.Get(0));
-                            byte0.Set(1, bitArrayZoom.Get(1));
-                            byte0.Set(2, bitArrayZoom.Get(2));
-                            byte0.Set(3, bitArrayZoom.Get(3));
-                            //set 3
-                            byte0.Set(4, true);
-                            byte0.Set(5, true);
-                            byte0.Set(6, false);
-                            byte0.Set(7, false);
-
-                            byte byteRes0 = ConvertToByte(byte0);
-
-                            comTVK1.DATA[6] = byteRes0;
-                            //comTVK1.DATA[6] = 0x03;
-                            comTVK1.DATA[7] = 0xFF;
-                            TVK1DataChanged = false;
-                        }
-                        if (camZoomStopSend)
-                        {
-                            if (TVK1DataChanged)
-                                comTVK1.DATA[1] = ++Cin;
-                            comTVK1.DATA[2] = 0x81;
-                            comTVK1.DATA[3] = 0x01;
-                            comTVK1.DATA[4] = 0x04;
-                            comTVK1.DATA[5] = 0x07;
-                            comTVK1.DATA[6] = 0x00;
-                            comTVK1.DATA[7] = 0xFF;
-                            TVK1DataChanged = false;
-                        }
-                        if (camZoomDirectSend)
-                        {
-                            if (TVK1DataChanged)
-                                comTVK1.DATA[1] = ++Cin;
-                            comTVK1.DATA[2] = 0x81;
-                            comTVK1.DATA[3] = 0x01;
-                            comTVK1.DATA[4] = 0x04;
-                            comTVK1.DATA[5] = 0x47;
-
-                            //get pqrs 4 bits values
-                            int iValZoom = (int)numTVK1Zoom.Value;
-                            int[] myInts = new int[1];
-                            myInts[0] = iValZoom;
-                            BitArray bitArrayZoom = new BitArray(myInts);
-                            BitArray byte0 = new BitArray(8);
-                            BitArray byte1 = new BitArray(8);
-                            BitArray byte2 = new BitArray(8);
-                            BitArray byte3 = new BitArray(8);
-                            byte0.Set(0, bitArrayZoom.Get(0));
-                            byte0.Set(1, bitArrayZoom.Get(1));
-                            byte0.Set(2, bitArrayZoom.Get(2));
-                            byte0.Set(3, bitArrayZoom.Get(3));
-                            byte1.Set(0, bitArrayZoom.Get(4));
-                            byte1.Set(1, bitArrayZoom.Get(5));
-                            byte1.Set(2, bitArrayZoom.Get(6));
-                            byte1.Set(3, bitArrayZoom.Get(7));
-                            byte2.Set(0, bitArrayZoom.Get(8));
-                            byte2.Set(1, bitArrayZoom.Get(9));
-                            byte2.Set(2, bitArrayZoom.Get(10));
-                            byte2.Set(3, bitArrayZoom.Get(11));
-                            byte3.Set(0, bitArrayZoom.Get(12));
-                            byte3.Set(1, bitArrayZoom.Get(13));
-                            byte3.Set(2, bitArrayZoom.Get(14));
-                            byte3.Set(3, bitArrayZoom.Get(15));
-                            byte byteRes0 = ConvertToByte(byte0);
-                            byte byteRes1 = ConvertToByte(byte1);
-                            byte byteRes2 = ConvertToByte(byte2);
-                            byte byteRes3 = ConvertToByte(byte3);
-
-                            comTVK1.DATA[6] = byteRes3;
-                            comTVK1.DATA[7] = byteRes2;
-                            comTVK1.DATA[8] = byteRes1;
-                            comTVK1.DATA[9] = byteRes0;
-                            comTVK1.DATA[10] = 0xFF;
-                            TVK1DataChanged = false;
-                        }
-
-                        if (camFocusFarVariableSend)
-                        {
-                            if (TVK1DataChanged)
-                                comTVK1.DATA[1] = ++Cin;
-                            comTVK1.DATA[2] = 0x81;
-                            comTVK1.DATA[3] = 0x01;
-                            comTVK1.DATA[4] = 0x04;
-                            comTVK1.DATA[5] = 0x08;
-
-                            //get p 4 bits value
-                            byte iValFocusFarVariableP = (byte)numTVK1FocusFarNearVariableP.Value;
-                            byte[] myBytes = new byte[1];
-                            myBytes[0] = iValFocusFarVariableP;
-                            BitArray bitArrayZoom = new BitArray(myBytes);
-                            BitArray byte0 = new BitArray(8);
-                            //set p
-                            byte0.Set(0, bitArrayZoom.Get(0));
-                            byte0.Set(1, bitArrayZoom.Get(1));
-                            byte0.Set(2, bitArrayZoom.Get(2));
-                            byte0.Set(3, bitArrayZoom.Get(3));
-                            //set 2
-                            byte0.Set(4, false);
-                            byte0.Set(5, true);
-                            byte0.Set(6, false);
-                            byte0.Set(7, false);
-
-                            byte byteRes0 = ConvertToByte(byte0);
-
-                            comTVK1.DATA[6] = byteRes0;
-                            //comTVK1.DATA[6] = 0x02;
-                            comTVK1.DATA[7] = 0xFF;
-                            TVK1DataChanged = false;
-                        }
-                        if (camFocusNearVariableSend)
-                        {
-                            if (TVK1DataChanged)
-                                comTVK1.DATA[1] = ++Cin;
-                            comTVK1.DATA[2] = 0x81;
-                            comTVK1.DATA[3] = 0x01;
-                            comTVK1.DATA[4] = 0x04;
-                            comTVK1.DATA[5] = 0x08;
-
-                            //get p 4 bits value
-                            byte iValFocusNearVariableP = (byte)numTVK1FocusFarNearVariableP.Value;
-                            byte[] myBytes = new byte[1];
-                            myBytes[0] = iValFocusNearVariableP;
-                            BitArray bitArrayZoom = new BitArray(myBytes);
-                            BitArray byte0 = new BitArray(8);
-                            //set p
-                            byte0.Set(0, bitArrayZoom.Get(0));
-                            byte0.Set(1, bitArrayZoom.Get(1));
-                            byte0.Set(2, bitArrayZoom.Get(2));
-                            byte0.Set(3, bitArrayZoom.Get(3));
-                            //set 3
-                            byte0.Set(4, true);
-                            byte0.Set(5, true);
-                            byte0.Set(6, false);
-                            byte0.Set(7, false);
-
-                            byte byteRes0 = ConvertToByte(byte0);
-
-                            comTVK1.DATA[6] = byteRes0;
-                            //comTVK1.DATA[6] = 0x03;
-                            comTVK1.DATA[7] = 0xFF;
-                            TVK1DataChanged = false;
-                        }
-                        if (camFocusStopSend)
-                        {
-                            if (TVK1DataChanged)
-                                comTVK1.DATA[1] = ++Cin;
-                            comTVK1.DATA[2] = 0x81;
-                            comTVK1.DATA[3] = 0x01;
-                            comTVK1.DATA[4] = 0x04;
-                            comTVK1.DATA[5] = 0x08;
-                            comTVK1.DATA[6] = 0x00;
-                            comTVK1.DATA[7] = 0xFF;
-                            TVK1DataChanged = false;
-                        }
-                        if (camFocusDirectSend)
-                        {
-                            if (TVK1DataChanged)
-                                comTVK1.DATA[1] = ++Cin;
-                            comTVK1.DATA[2] = 0x81;
-                            comTVK1.DATA[3] = 0x01;
-                            comTVK1.DATA[4] = 0x04;
-                            comTVK1.DATA[5] = 0x48;
-
-                            //get pqrs 4 bits values
-                            int iValFocus = (int)numTVK1Focus.Value;
-                            int[] myInts = new int[1];
-                            myInts[0] = iValFocus;
-                            BitArray bitArrayZoom = new BitArray(myInts);
-                            BitArray byte0 = new BitArray(8);
-                            BitArray byte1 = new BitArray(8);
-                            BitArray byte2 = new BitArray(8);
-                            BitArray byte3 = new BitArray(8);
-                            byte0.Set(0, bitArrayZoom.Get(0));
-                            byte0.Set(1, bitArrayZoom.Get(1));
-                            byte0.Set(2, bitArrayZoom.Get(2));
-                            byte0.Set(3, bitArrayZoom.Get(3));
-                            byte1.Set(0, bitArrayZoom.Get(4));
-                            byte1.Set(1, bitArrayZoom.Get(5));
-                            byte1.Set(2, bitArrayZoom.Get(6));
-                            byte1.Set(3, bitArrayZoom.Get(7));
-                            byte2.Set(0, bitArrayZoom.Get(8));
-                            byte2.Set(1, bitArrayZoom.Get(9));
-                            byte2.Set(2, bitArrayZoom.Get(10));
-                            byte2.Set(3, bitArrayZoom.Get(11));
-                            byte3.Set(0, bitArrayZoom.Get(12));
-                            byte3.Set(1, bitArrayZoom.Get(13));
-                            byte3.Set(2, bitArrayZoom.Get(14));
-                            byte3.Set(3, bitArrayZoom.Get(15));
-                            byte byteRes0 = ConvertToByte(byte0);
-                            byte byteRes1 = ConvertToByte(byte1);
-                            byte byteRes2 = ConvertToByte(byte2);
-                            byte byteRes3 = ConvertToByte(byte3);
-
-                            comTVK1.DATA[6] = byteRes3;
-                            comTVK1.DATA[7] = byteRes2;
-                            comTVK1.DATA[8] = byteRes1;
-                            comTVK1.DATA[9] = byteRes0;
-                            comTVK1.DATA[10] = 0xFF;
-                            TVK1DataChanged = false;
-                        }
-                        if (camAutoFocusSend)
-                        {
-                            if ((bool)checkBoxTVK1CAM_FocusAuto.IsChecked)
-                            {
-                                if (TVK1DataChanged)
-                                    comTVK1.DATA[1] = ++Cin;
-                                comTVK1.DATA[2] = 0x81;
-                                comTVK1.DATA[3] = 0x01;
-                                comTVK1.DATA[4] = 0x04;
-                                comTVK1.DATA[5] = 0x38;
-                                comTVK1.DATA[6] = 0x02;
-                                comTVK1.DATA[7] = 0xFF;
-                                TVK1DataChanged = false;
-                            }
-                            else
-                            {
-                                if (TVK1DataChanged)
-                                    comTVK1.DATA[1] = ++Cin;
-                                comTVK1.DATA[2] = 0x81;
-                                comTVK1.DATA[3] = 0x01;
-                                comTVK1.DATA[4] = 0x04;
-                                comTVK1.DATA[5] = 0x38;
-                                comTVK1.DATA[6] = 0x03;
-                                comTVK1.DATA[7] = 0xFF;
-                                TVK1DataChanged = false;
-                            }
-                        }
-
-                        buf_chksum_all[0] = comTVK1.START;
-                        buf_chksum_all[1] = comTVK1.ADDRESS;
-                        buf_chksum_all[2] = comTVK1.LENGTH[0];
-                        buf_chksum_all[3] = comTVK1.LENGTH[1];
-
-                        byte[] byteArray = BitConverter.GetBytes(chksm);
-
-                        buf_chksum_all[4] = byteArray[1];
-                        buf_chksum_all[5] = byteArray[0];
-
-                        buf_chksum_all[6] = comTVK1.DATA[0];
-                        buf_chksum_all[7] = comTVK1.DATA[1];
-                        buf_chksum_all[8] = comTVK1.DATA[2];
-                        buf_chksum_all[9] = comTVK1.DATA[3];
-                        buf_chksum_all[10] = comTVK1.DATA[4];
-                        buf_chksum_all[11] = comTVK1.DATA[5];
-                        buf_chksum_all[12] = comTVK1.DATA[6];
-                        buf_chksum_all[13] = comTVK1.DATA[7];
-                        buf_chksum_all[14] = comTVK1.DATA[8];
-                        buf_chksum_all[15] = comTVK1.DATA[9];
-                        buf_chksum_all[16] = comTVK1.DATA[10];
-                        buf_chksum_all[17] = comTVK1.DATA[11];
-                        buf_chksum_all[18] = comTVK1.DATA[12];
-                        buf_chksum_all[19] = comTVK1.DATA[13];
-                        buf_chksum_all[20] = comTVK1.DATA[14];
-                        buf_chksum_all[21] = comTVK1.DATA[15];
-                        buf_chksum_all[22] = comTVK1.DATA[16];
-                        buf_chksum_all[23] = comTVK1.DATA[17];
-
-                        ushort chksm2 = (ushort)CheckSumRFC1071(buf_chksum_all, 24);
-                        comTVK1.CHECKSUM2 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_all, 24));
-
-                    Dispatcher.BeginInvoke(new Action(delegate
-                    {
-                        lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
-                    }));
-
-                    uart.SendCommand(comTVK1);
-                        if (!isThereAnotherActiveDevice(cycleIndex))
-                            setTagUartReceived(false);
-                        //tagUartReceivedInterm = false;
-
-                        currentDevice = Device.MU_GSP;
-                    }
-                //ТВК1 END
-
-                //ТВК2
-                //lock (locker)
-                {
-                    if (TVK2InfExchangeONOFF && getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 2)
-                    {
-                        comTVK2.DiscardDataBuf();
-                        byte[] byteArray;
-                        BitArray bitArray = new BitArray(8);
-                        byte[] buf_chksum_header = new byte[4];
-                        byte[] buf_chksum_all = new byte[28];//полная длина пакета 30 - 2 байта (длина чексуммы 2)
-
-
-                        comTVK2.START = st_out.START;
-                        comTVK2.ADDRESS = 13;
-                        comTVK2.LENGTH[0] = 11;//длина пакета 22 байта для камеры ТВК2 (22/2 т.к измерение длины в word - 2 байта)
-                        comTVK2.LENGTH[1] = 0;
-
-                        buf_chksum_header[0] = comTVK2.START;
-                        buf_chksum_header[1] = comTVK2.ADDRESS;
-                        buf_chksum_header[2] = comTVK2.LENGTH[0];
-                        buf_chksum_header[3] = comTVK2.LENGTH[1];
-
-                        ushort chksm = (ushort)CheckSumRFC1071(buf_chksum_header, 4);
-                        comTVK2.CHECKSUM1 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_header, 4));
-
-                        bitArray.SetAll(false);
-
-                        if (st_outTVK2.POWER)
-                            bitArray.Set(0, true);
-                        else
-                            bitArray.Set(0, false);
-                        if (st_outTVK2.VIDEO_OUT_EN)
-                            bitArray.Set(1, true);
-                        else
-                            bitArray.Set(1, false);
-                        if (st_outTVK2.EXPO_MODE)
-                            bitArray.Set(2, true);
-                        else
-                            bitArray.Set(2, false);
-                        if (st_outTVK2.CONTRAST_MODE)
-                            bitArray.Set(3, true);
-                        else
-                            bitArray.Set(3, false);
-                        if (st_outTVK2.CAPTURE_MODE == 0)
-                        {
-                            bitArray.Set(4, false);
-                            bitArray.Set(5, false);
-                        }
-                        if (st_outTVK2.CAPTURE_MODE == 1)
-                        {
-                            bitArray.Set(4, true);
-                            bitArray.Set(5, false);
-                        }
-                        if (st_outTVK2.CAPTURE_MODE == 2)
-                        {
-                            bitArray.Set(4, false);
-                            bitArray.Set(5, true);
-                        }
-
-                        if (st_outTVK2.HDR_MODE == 0)
-                        {
-                            bitArray.Set(6, false);
-                            bitArray.Set(7, false);
-                        }
-                        if (st_outTVK2.HDR_MODE == 1)
-                        {
-                            bitArray.Set(6, true);
-                            bitArray.Set(7, false);
-                        }
-                        if (st_outTVK2.HDR_MODE == 2)
-                        {
-                            bitArray.Set(6, false);
-                            bitArray.Set(7, true);
-                        }
-
-                        comTVK2.DATA[0] = ConvertToByte(bitArray);
-
-                        byteArray = BitConverter.GetBytes(st_outTVK2.CONTRAST_GAIN);
-                        comTVK2.DATA[1] = byteArray[0];
-                        comTVK2.DATA[2] = byteArray[1];
-
-                        byteArray = BitConverter.GetBytes(st_outTVK2.CONTRAST_OFFSET);
-                        comTVK2.DATA[3] = byteArray[0];
-                        comTVK2.DATA[4] = byteArray[1];
-
-                        if (st_outTVK2.CAPTURE_MODE == 0)
-                        {
-                            UInt16 val = 0x0591;
-                            byteArray = BitConverter.GetBytes(val);
-                            comTVK2.DATA[5] = byteArray[0];
-                            comTVK2.DATA[6] = byteArray[1];
-                            comTVK2.DATA[7] = byteArray[0];
-                            comTVK2.DATA[8] = byteArray[1];
-
-                            bitArray.SetAll(false);
-                            bitArray.Set(3, true);//115 регистр = 0х0008
-                            bitArray.Set(4, true);//116 регистр = 03
-                            bitArray.Set(5, true);//116 регистр = 03
-
-                            comTVK2.DATA[9] = ConvertToByte(bitArray);
-
-                            val = 0x00e6;//116 регистр = e6
-                            byteArray = BitConverter.GetBytes(val);
-                            comTVK2.DATA[10] = byteArray[0];
-
-                            val = 0x6040;
-                            byteArray = BitConverter.GetBytes(val);
-                            comTVK2.DATA[20] = byteArray[0];
-                            comTVK2.DATA[21] = byteArray[1];
-                        }
-                        if (st_outTVK2.CAPTURE_MODE == 1)
-                        {
-                            UInt16 val = 0x0776;
-                            byteArray = BitConverter.GetBytes(val);
-                            comTVK2.DATA[5] = byteArray[0];
-                            comTVK2.DATA[6] = byteArray[1];
-                            comTVK2.DATA[7] = byteArray[0];
-                            comTVK2.DATA[8] = byteArray[1];
-
-                            bitArray.SetAll(false);
-                            bitArray.Set(0, true);//115 регистр = 0х0000
-                            bitArray.Set(4, true);//116 регистр = 03
-                            bitArray.Set(5, true);//116 регистр = 03
-
-                            comTVK2.DATA[9] = ConvertToByte(bitArray);
-
-                            val = 0x00e6;//116 регистр = e6
-                            byteArray = BitConverter.GetBytes(val);
-                            comTVK2.DATA[10] = byteArray[0];
-
-                            val = 0x6040;
-                            byteArray = BitConverter.GetBytes(val);
-                            comTVK2.DATA[20] = byteArray[0];
-                            comTVK2.DATA[21] = byteArray[1];
-                        }
-
-                        byte[] byteArrayEXPOSURE = BitConverter.GetBytes(st_outTVK2.EXPOSURE);
-                        comTVK2.DATA[11] = byteArrayEXPOSURE[0];
-                        comTVK2.DATA[12] = byteArrayEXPOSURE[1];
-                        comTVK2.DATA[13] = byteArrayEXPOSURE[2];
-                        byte[] byteArrayHDR_EXPOSURE1 = BitConverter.GetBytes(st_outTVK2.HDR_EXPOSURE1);
-                        comTVK2.DATA[14] = byteArrayHDR_EXPOSURE1[0];
-                        comTVK2.DATA[15] = byteArrayHDR_EXPOSURE1[1];
-                        comTVK2.DATA[16] = byteArrayHDR_EXPOSURE1[2];
-                        byte[] byteArrayHDR_EXPOSURE2 = BitConverter.GetBytes(st_outTVK2.HDR_EXPOSURE2);
-                        comTVK2.DATA[17] = byteArrayHDR_EXPOSURE2[0];
-                        comTVK2.DATA[18] = byteArrayHDR_EXPOSURE2[1];
-                        comTVK2.DATA[19] = byteArrayHDR_EXPOSURE2[2];
-
-
-                        buf_chksum_all[0] = comTVK2.START;
-                        buf_chksum_all[1] = comTVK2.ADDRESS;
-                        buf_chksum_all[2] = comTVK2.LENGTH[0];
-                        buf_chksum_all[3] = comTVK2.LENGTH[1];
-
-                        byte[] byteArraychksm = BitConverter.GetBytes(chksm);
-
-                        buf_chksum_all[4] = byteArraychksm[1];
-                        buf_chksum_all[5] = byteArraychksm[0];
-
-                        buf_chksum_all[6] = comTVK2.DATA[0];
-                        buf_chksum_all[7] = comTVK2.DATA[1];
-                        buf_chksum_all[8] = comTVK2.DATA[2];
-                        buf_chksum_all[9] = comTVK2.DATA[3];
-                        buf_chksum_all[10] = comTVK2.DATA[4];
-                        buf_chksum_all[11] = comTVK2.DATA[5];
-                        buf_chksum_all[12] = comTVK2.DATA[6];
-                        buf_chksum_all[13] = comTVK2.DATA[7];
-                        buf_chksum_all[14] = comTVK2.DATA[8];
-                        buf_chksum_all[15] = comTVK2.DATA[9];
-                        buf_chksum_all[16] = comTVK2.DATA[10];
-                        buf_chksum_all[17] = comTVK2.DATA[11];
-                        buf_chksum_all[18] = comTVK2.DATA[12];
-                        buf_chksum_all[19] = comTVK2.DATA[13];
-                        buf_chksum_all[20] = comTVK2.DATA[14];
-                        buf_chksum_all[21] = comTVK2.DATA[15];
-                        buf_chksum_all[22] = comTVK2.DATA[16];
-                        buf_chksum_all[23] = comTVK2.DATA[17];
-                        buf_chksum_all[24] = comTVK2.DATA[18];
-                        buf_chksum_all[25] = comTVK2.DATA[19];
-                        buf_chksum_all[26] = comTVK2.DATA[20];
-                        buf_chksum_all[27] = comTVK2.DATA[21];
-
-                        ushort chksm2 = (ushort)CheckSumRFC1071(buf_chksum_all, 28);
-                        comTVK2.CHECKSUM2 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_all, 28));
-
-                        Dispatcher.BeginInvoke(new Action(delegate
-                        {
-                            lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
-                        }));
-
-                        uart.SendCommand(comTVK2);
-                        if (!isThereAnotherActiveDevice(cycleIndex))
-                            setTagUartReceived(false);
-                        //tagUartReceivedInterm = false;
-                        //Debug.WriteLine("ТВК2 -- MainWindow.InitSendCommand(), cycleIndex: {0}.", cycleIndex);
-                        //Debug.WriteLine("ТВК2 -- MainWindow.InitSendCommand(), tagUartReceived: {0}.", getTagUartReceived());
-
-                        currentDevice = Device.MU_GSP;
-                    }
-                }
-                    //ТВК2 END
-
-                    //ТПВК
-                    if (TPVKInfExchangeONOFF && getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 3)
-                    {
-                        comTPVK.DiscardDataBuf();
-                        byte[] byteArray;
-                        BitArray bitArray = new BitArray(8);
-                        byte[] buf_chksum_header = new byte[4];
-                        byte[] buf_chksum_all = new byte[22];//полная длина пакета 24 - 2 байта (длина чексуммы 2)
-
-
-                        comTPVK.START = st_out.START;
-                        comTPVK.ADDRESS = 14;
-                        comTPVK.LENGTH[0] = 7;//длина пакета 13 байт для камеры ТПВК
-                        comTPVK.LENGTH[1] = 0;
-
-                        buf_chksum_header[0] = comTPVK.START;
-                        buf_chksum_header[1] = comTPVK.ADDRESS;
-                        buf_chksum_header[2] = comTPVK.LENGTH[0];
-                        buf_chksum_header[3] = comTPVK.LENGTH[1];
-
-                        ushort chksm = (ushort)CheckSumRFC1071(buf_chksum_header, 4);
-                        comTPVK.CHECKSUM1 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_header, 4));
-
-                        //////////
-                        bitArray.SetAll(false);
-
-                        /*if (st_outTVK2.POWER)
-                            bitArray.Set(0, true);
-                        else
-                            bitArray.Set(0, false);
-                        if (st_outTVK2.VIDEO_OUT_EN)
-                            bitArray.Set(1, true);
-                        else
-                            bitArray.Set(1, false);*/
-
-
-                        comTPVK.DATA[0] = ConvertToByte(bitArray);
-
-                        byteArray = BitConverter.GetBytes(st_outTVK2.CONTRAST_GAIN);
-                        comTPVK.DATA[1] = byteArray[0];
-                        comTPVK.DATA[2] = byteArray[1];
-
-                        byteArray = BitConverter.GetBytes(st_outTVK2.CONTRAST_OFFSET);
-                        comTPVK.DATA[3] = byteArray[0];
-                        comTPVK.DATA[4] = byteArray[1];
-                        ////
-
-                        comTPVK.DATA[0] = 0;
-                        comTPVK.DATA[1] = 0;
-                        comTPVK.DATA[2] = 0;
-                        comTPVK.DATA[3] = 0;
-                        comTPVK.DATA[4] = 0;
-                        comTPVK.DATA[5] = 0;
-                        comTPVK.DATA[6] = 0;
-                        comTPVK.DATA[7] = 0;
-                        comTPVK.DATA[8] = 0;
-                        comTPVK.DATA[9] = 0;
-                        comTPVK.DATA[10] = 0;
-                        comTPVK.DATA[11] = 0;
-                        comTPVK.DATA[12] = 0;
-
-                        buf_chksum_all[0] = comTPVK.START;
-                        buf_chksum_all[1] = comTPVK.ADDRESS;
-                        buf_chksum_all[2] = comTPVK.LENGTH[0];
-                        buf_chksum_all[3] = comTPVK.LENGTH[1];
-
-                        byte[] byteArray2 = BitConverter.GetBytes(chksm);
-
-                        buf_chksum_all[4] = byteArray2[1];
-                        buf_chksum_all[5] = byteArray2[0];
-
-                        buf_chksum_all[6] = comTPVK.DATA[0];
-                        buf_chksum_all[7] = comTPVK.DATA[1];
-                        buf_chksum_all[8] = comTPVK.DATA[2];
-                        buf_chksum_all[9] = comTPVK.DATA[3];
-                        buf_chksum_all[10] = comTPVK.DATA[4];
-                        buf_chksum_all[11] = comTPVK.DATA[5];
-                        buf_chksum_all[12] = comTPVK.DATA[6];
-                        buf_chksum_all[13] = comTPVK.DATA[7];
-                        buf_chksum_all[14] = comTPVK.DATA[8];
-                        buf_chksum_all[15] = comTPVK.DATA[9];
-                        buf_chksum_all[16] = comTPVK.DATA[10];
-                        buf_chksum_all[17] = comTPVK.DATA[11];
-                        buf_chksum_all[18] = comTPVK.DATA[12];
-
-                        ushort chksm2 = (ushort)CheckSumRFC1071(buf_chksum_all, 19);
-                        comTPVK.CHECKSUM2 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_all, 19));
-
-                    Dispatcher.BeginInvoke(new Action(delegate
-                    {
-                        lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
-                    }));
-
-                        uart.SendCommand(comTPVK);
-                        if (!isThereAnotherActiveDevice(cycleIndex))
-                            setTagUartReceived(false);
-                        //tagUartReceivedInterm = false;
+        {
+            while (true)
+            {
+                 if (uart == null)
+                     return;
+                 //numOfPocket++;
+
+                 //МУ ГСП            
+                 if (MUGSPInfExchangeONOFF && getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 0)
+                 {
+                     com.DiscardDataBuf();
+                     byte[] buf_chksum_header = new byte[4];
+                     byte[] buf_chksum_all = new byte[16];//полная длина пакета 18 - 2 байта (длина чексуммы 2)
+
+                     com.START = st_out.START;
+                     com.ADDRESS = st_out.ADDRESS;
+                     com.LENGTH[0] = 5;
+                     com.LENGTH[1] = 0;
+
+                     buf_chksum_header[0] = com.START;
+                     buf_chksum_header[1] = com.ADDRESS;
+                     buf_chksum_header[2] = com.LENGTH[0];
+                     buf_chksum_header[3] = com.LENGTH[1];
+
+                     ushort chksm = (ushort)CheckSumRFC1071(buf_chksum_header, 4);
+                     com.CHECKSUM1 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_header, 4));
+
+                     com.DATA[0] = st_out.MODE_AZ;
+                     com.DATA[1] = st_out.MODE_EL;
+                     com.DATA[2] = st_out.INPUT_AZ[0];
+                     com.DATA[3] = st_out.INPUT_AZ[1];
+                     com.DATA[4] = st_out.INPUT_AZ[2];
+                     com.DATA[5] = st_out.INPUT_EL[0];
+                     com.DATA[6] = st_out.INPUT_EL[1];
+                     com.DATA[7] = st_out.INPUT_EL[2];
+
+                     sbyte byte9 = 0;
+
+                     if (st_out.ECO_MODE)
+                         byte9 |= 1 << 0;
+                     else
+                         byte9 &= ~(1 << 0);
+
+                     if (st_out.RESET)
+                         byte9 |= 1 << 1;
+                     else
+                         byte9 &= ~(1 << 1);
+
+
+                     com.DATA[8] = (byte)byte9;
+
+                     com.DATA[9] = st_out.RESERVE2;
+
+                     buf_chksum_all[0] = com.START;
+                     buf_chksum_all[1] = com.ADDRESS;
+                     buf_chksum_all[2] = com.LENGTH[0];
+                     buf_chksum_all[3] = com.LENGTH[1];
+
+                     byte[] byteArray = BitConverter.GetBytes(chksm);
+
+                     buf_chksum_all[4] = byteArray[1];
+                     buf_chksum_all[5] = byteArray[0];
+
+                     buf_chksum_all[6] = com.DATA[0];
+                     buf_chksum_all[7] = com.DATA[1];
+                     buf_chksum_all[8] = com.DATA[2];
+                     buf_chksum_all[9] = com.DATA[3];
+                     buf_chksum_all[10] = com.DATA[4];
+                     buf_chksum_all[11] = com.DATA[5];
+                     buf_chksum_all[12] = com.DATA[6];
+                     buf_chksum_all[13] = com.DATA[7];
+                     buf_chksum_all[14] = com.DATA[8];
+                     buf_chksum_all[15] = com.DATA[9];
+
+                     ushort chksm2 = (ushort)CheckSumRFC1071(buf_chksum_all, 16);
+                     com.CHECKSUM2 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_all, 16));
+
+                     Dispatcher.BeginInvoke(new Action(delegate
+                     {
+                         lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
+                     }));
+
+                    uart.SendCommand(com);
+                     numOfPocket++;
+                     //if (!isThereAnotherActiveDevice(cycleIndex))//выкинул проверку, вроде работает !
+                        setTagUartReceived(false);
+                     //tagUartReceivedInterm = false;
+
+                 //если была однократная посылка - остановить таймер передачи и НЕ закрывать uart  !
+                 /*if (!(bool)chbCycleMode.IsChecked)
+                 {
+                     //uart.DesetFalse();  //--- оставить active в true
+
+                     tmrExchange.Stop();
+                     //uart.Close();
+
+                     buttonStart.Content = "Старт";
+                     buttonStart.Background = Brushes.LightGray;
+                     cbComPorts.IsEnabled = true;
+                     //uart = null;
+                 }*/
+
+                 currentDevice = Device.TVK1;
+                 }
+                 //МУ ГСП END
+
+                 //ТВК1
+                 if (/*TVK1DataChanged && */TVK1InfExchangeONOFF && getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 1)
+                 {
+                     comTVK1.DiscardDataBuf();
+                     byte[] buf_chksum_header = new byte[4];
+                     byte[] buf_chksum_all = new byte[24];//полная длина пакета 26 - 2 байта (длина чексуммы 2)
+
+
+                     comTVK1.START = st_out.START;
+                     comTVK1.ADDRESS = 12;
+                     comTVK1.LENGTH[0] = 9;//длина пакета 18 байт для камеры Sony (У + Cin + ТВК1 PACKET (16 байт))
+                     comTVK1.LENGTH[1] = 0;
+
+                     buf_chksum_header[0] = comTVK1.START;
+                     buf_chksum_header[1] = comTVK1.ADDRESS;
+                     buf_chksum_header[2] = comTVK1.LENGTH[0];
+                     buf_chksum_header[3] = comTVK1.LENGTH[1];
+
+                     ushort chksm = (ushort)CheckSumRFC1071(buf_chksum_header, 4);
+                     comTVK1.CHECKSUM1 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_header, 4));
+
+                     if (Cin == 255)
+                         Cin = 0;
+
+                     ////Управляющий байт блока управления камерой (байт 0)
+                     //if (!camZoomTeleVariableSend && !camZoomWideVariableSend && !camZoomStopSend &&
+                     //    !camFocusFarVariableSend && !camFocusNearVariableSend && !camFocusStopSend)
+                     {
+                         BitArray bitArray = new BitArray(8);
+                         bitArray.SetAll(false);
+
+                         if (st_outTVK1.POWER == true)
+                         {
+                             bitArray.Set(0, true);
+                             //TVK1DataChanged = false;
+                         }
+                         else
+                         {
+                             bitArray.Set(0, false);
+                             //TVK1DataChanged = false;
+                         }
+                         if (st_outTVK1.RESET == true)
+                         {
+                             bitArray.Set(1, true);
+                             //TVK1DataChanged = false;
+                         }
+                         else
+                         {
+                             bitArray.Set(1, false);
+                             //TVK1DataChanged = false;
+                         }
+                         if (st_outTVK1.VIDEO_IN_EN == true)
+                         {
+                             bitArray.Set(2, true);
+                             //TVK1DataChanged = false;
+                         }
+                         else
+                         {
+                             bitArray.Set(2, false);
+                             //TVK1DataChanged = false;
+                         }
+                         if (st_outTVK1.VIDEO_OUT_EN == true)
+                         {
+                             bitArray.Set(3, true);
+                             //TVK1DataChanged = false;
+                         }
+                         else
+                         {
+                             bitArray.Set(3, false);
+                             //TVK1DataChanged = false;
+                         }
+
+                         comTVK1.DATA[0] = ConvertToByte(bitArray);//Управляющий байт
+                     }
+
+                     if (camZoomTeleVariableSend)
+                     {
+                         if (TVK1DataChanged)
+                             comTVK1.DATA[1] = ++Cin;
+                         comTVK1.DATA[2] = 0x81;
+                         comTVK1.DATA[3] = 0x01;
+                         comTVK1.DATA[4] = 0x04;
+                         comTVK1.DATA[5] = 0x07;
+
+                         //get p 4 bits value
+                         byte iValZoomTeleVariableP = (byte)numTVK1ZoomTeleVariableP.Value;
+                         byte[] myBytes = new byte[1];
+                         myBytes[0] = iValZoomTeleVariableP;
+                         BitArray bitArrayZoom = new BitArray(myBytes);
+                         BitArray byte0 = new BitArray(8);
+                         //set p
+                         byte0.Set(0, bitArrayZoom.Get(0));
+                         byte0.Set(1, bitArrayZoom.Get(1));
+                         byte0.Set(2, bitArrayZoom.Get(2));
+                         byte0.Set(3, bitArrayZoom.Get(3));
+                         //set 2
+                         byte0.Set(4, false);
+                         byte0.Set(5, true);
+                         byte0.Set(6, false);
+                         byte0.Set(7, false);
+
+                         byte byteRes0 = ConvertToByte(byte0);
+
+                         comTVK1.DATA[6] = byteRes0;
+
+                         //comTVK1.DATA[6] = 0x02;
+                         comTVK1.DATA[7] = 0xFF;
+                         TVK1DataChanged = false;
+                     }
+                     if (camZoomWideVariableSend)
+                     {
+                         if (TVK1DataChanged)
+                             comTVK1.DATA[1] = ++Cin;
+                         comTVK1.DATA[2] = 0x81;
+                         comTVK1.DATA[3] = 0x01;
+                         comTVK1.DATA[4] = 0x04;
+                         comTVK1.DATA[5] = 0x07;
+                         //get p 4 bits value
+                         byte iValZoomTeleVariableP = (byte)numTVK1ZoomTeleVariableP.Value;
+                         byte[] myBytes = new byte[1];
+                         myBytes[0] = iValZoomTeleVariableP;
+                         BitArray bitArrayZoom = new BitArray(myBytes);
+                         BitArray byte0 = new BitArray(8);
+                         //set p
+                         byte0.Set(0, bitArrayZoom.Get(0));
+                         byte0.Set(1, bitArrayZoom.Get(1));
+                         byte0.Set(2, bitArrayZoom.Get(2));
+                         byte0.Set(3, bitArrayZoom.Get(3));
+                         //set 3
+                         byte0.Set(4, true);
+                         byte0.Set(5, true);
+                         byte0.Set(6, false);
+                         byte0.Set(7, false);
+
+                         byte byteRes0 = ConvertToByte(byte0);
+
+                         comTVK1.DATA[6] = byteRes0;
+                         //comTVK1.DATA[6] = 0x03;
+                         comTVK1.DATA[7] = 0xFF;
+                         TVK1DataChanged = false;
+                     }
+                     if (camZoomStopSend)
+                     {
+                         if (TVK1DataChanged)
+                             comTVK1.DATA[1] = ++Cin;
+                         comTVK1.DATA[2] = 0x81;
+                         comTVK1.DATA[3] = 0x01;
+                         comTVK1.DATA[4] = 0x04;
+                         comTVK1.DATA[5] = 0x07;
+                         comTVK1.DATA[6] = 0x00;
+                         comTVK1.DATA[7] = 0xFF;
+                         TVK1DataChanged = false;
+                     }
+                     if (camZoomDirectSend)
+                     {
+                         if (TVK1DataChanged)
+                             comTVK1.DATA[1] = ++Cin;
+                         comTVK1.DATA[2] = 0x81;
+                         comTVK1.DATA[3] = 0x01;
+                         comTVK1.DATA[4] = 0x04;
+                         comTVK1.DATA[5] = 0x47;
+
+                         //get pqrs 4 bits values
+                         int iValZoom = (int)numTVK1Zoom.Value;
+                         int[] myInts = new int[1];
+                         myInts[0] = iValZoom;
+                         BitArray bitArrayZoom = new BitArray(myInts);
+                         BitArray byte0 = new BitArray(8);
+                         BitArray byte1 = new BitArray(8);
+                         BitArray byte2 = new BitArray(8);
+                         BitArray byte3 = new BitArray(8);
+                         byte0.Set(0, bitArrayZoom.Get(0));
+                         byte0.Set(1, bitArrayZoom.Get(1));
+                         byte0.Set(2, bitArrayZoom.Get(2));
+                         byte0.Set(3, bitArrayZoom.Get(3));
+                         byte1.Set(0, bitArrayZoom.Get(4));
+                         byte1.Set(1, bitArrayZoom.Get(5));
+                         byte1.Set(2, bitArrayZoom.Get(6));
+                         byte1.Set(3, bitArrayZoom.Get(7));
+                         byte2.Set(0, bitArrayZoom.Get(8));
+                         byte2.Set(1, bitArrayZoom.Get(9));
+                         byte2.Set(2, bitArrayZoom.Get(10));
+                         byte2.Set(3, bitArrayZoom.Get(11));
+                         byte3.Set(0, bitArrayZoom.Get(12));
+                         byte3.Set(1, bitArrayZoom.Get(13));
+                         byte3.Set(2, bitArrayZoom.Get(14));
+                         byte3.Set(3, bitArrayZoom.Get(15));
+                         byte byteRes0 = ConvertToByte(byte0);
+                         byte byteRes1 = ConvertToByte(byte1);
+                         byte byteRes2 = ConvertToByte(byte2);
+                         byte byteRes3 = ConvertToByte(byte3);
+
+                         comTVK1.DATA[6] = byteRes3;
+                         comTVK1.DATA[7] = byteRes2;
+                         comTVK1.DATA[8] = byteRes1;
+                         comTVK1.DATA[9] = byteRes0;
+                         comTVK1.DATA[10] = 0xFF;
+                         TVK1DataChanged = false;
+                     }
+
+                     if (camFocusFarVariableSend)
+                     {
+                         if (TVK1DataChanged)
+                             comTVK1.DATA[1] = ++Cin;
+                         comTVK1.DATA[2] = 0x81;
+                         comTVK1.DATA[3] = 0x01;
+                         comTVK1.DATA[4] = 0x04;
+                         comTVK1.DATA[5] = 0x08;
+
+                         //get p 4 bits value
+                         byte iValFocusFarVariableP = (byte)numTVK1FocusFarNearVariableP.Value;
+                         byte[] myBytes = new byte[1];
+                         myBytes[0] = iValFocusFarVariableP;
+                         BitArray bitArrayZoom = new BitArray(myBytes);
+                         BitArray byte0 = new BitArray(8);
+                         //set p
+                         byte0.Set(0, bitArrayZoom.Get(0));
+                         byte0.Set(1, bitArrayZoom.Get(1));
+                         byte0.Set(2, bitArrayZoom.Get(2));
+                         byte0.Set(3, bitArrayZoom.Get(3));
+                         //set 2
+                         byte0.Set(4, false);
+                         byte0.Set(5, true);
+                         byte0.Set(6, false);
+                         byte0.Set(7, false);
+
+                         byte byteRes0 = ConvertToByte(byte0);
+
+                         comTVK1.DATA[6] = byteRes0;
+                         //comTVK1.DATA[6] = 0x02;
+                         comTVK1.DATA[7] = 0xFF;
+                         TVK1DataChanged = false;
+                     }
+                     if (camFocusNearVariableSend)
+                     {
+                         if (TVK1DataChanged)
+                             comTVK1.DATA[1] = ++Cin;
+                         comTVK1.DATA[2] = 0x81;
+                         comTVK1.DATA[3] = 0x01;
+                         comTVK1.DATA[4] = 0x04;
+                         comTVK1.DATA[5] = 0x08;
+
+                         //get p 4 bits value
+                         byte iValFocusNearVariableP = (byte)numTVK1FocusFarNearVariableP.Value;
+                         byte[] myBytes = new byte[1];
+                         myBytes[0] = iValFocusNearVariableP;
+                         BitArray bitArrayZoom = new BitArray(myBytes);
+                         BitArray byte0 = new BitArray(8);
+                         //set p
+                         byte0.Set(0, bitArrayZoom.Get(0));
+                         byte0.Set(1, bitArrayZoom.Get(1));
+                         byte0.Set(2, bitArrayZoom.Get(2));
+                         byte0.Set(3, bitArrayZoom.Get(3));
+                         //set 3
+                         byte0.Set(4, true);
+                         byte0.Set(5, true);
+                         byte0.Set(6, false);
+                         byte0.Set(7, false);
+
+                         byte byteRes0 = ConvertToByte(byte0);
+
+                         comTVK1.DATA[6] = byteRes0;
+                         //comTVK1.DATA[6] = 0x03;
+                         comTVK1.DATA[7] = 0xFF;
+                         TVK1DataChanged = false;
+                     }
+                     if (camFocusStopSend)
+                     {
+                         if (TVK1DataChanged)
+                             comTVK1.DATA[1] = ++Cin;
+                         comTVK1.DATA[2] = 0x81;
+                         comTVK1.DATA[3] = 0x01;
+                         comTVK1.DATA[4] = 0x04;
+                         comTVK1.DATA[5] = 0x08;
+                         comTVK1.DATA[6] = 0x00;
+                         comTVK1.DATA[7] = 0xFF;
+                         TVK1DataChanged = false;
+                     }
+                     if (camFocusDirectSend)
+                     {
+                         if (TVK1DataChanged)
+                             comTVK1.DATA[1] = ++Cin;
+                         comTVK1.DATA[2] = 0x81;
+                         comTVK1.DATA[3] = 0x01;
+                         comTVK1.DATA[4] = 0x04;
+                         comTVK1.DATA[5] = 0x48;
+
+                         //get pqrs 4 bits values
+                         int iValFocus = (int)numTVK1Focus.Value;
+                         int[] myInts = new int[1];
+                         myInts[0] = iValFocus;
+                         BitArray bitArrayZoom = new BitArray(myInts);
+                         BitArray byte0 = new BitArray(8);
+                         BitArray byte1 = new BitArray(8);
+                         BitArray byte2 = new BitArray(8);
+                         BitArray byte3 = new BitArray(8);
+                         byte0.Set(0, bitArrayZoom.Get(0));
+                         byte0.Set(1, bitArrayZoom.Get(1));
+                         byte0.Set(2, bitArrayZoom.Get(2));
+                         byte0.Set(3, bitArrayZoom.Get(3));
+                         byte1.Set(0, bitArrayZoom.Get(4));
+                         byte1.Set(1, bitArrayZoom.Get(5));
+                         byte1.Set(2, bitArrayZoom.Get(6));
+                         byte1.Set(3, bitArrayZoom.Get(7));
+                         byte2.Set(0, bitArrayZoom.Get(8));
+                         byte2.Set(1, bitArrayZoom.Get(9));
+                         byte2.Set(2, bitArrayZoom.Get(10));
+                         byte2.Set(3, bitArrayZoom.Get(11));
+                         byte3.Set(0, bitArrayZoom.Get(12));
+                         byte3.Set(1, bitArrayZoom.Get(13));
+                         byte3.Set(2, bitArrayZoom.Get(14));
+                         byte3.Set(3, bitArrayZoom.Get(15));
+                         byte byteRes0 = ConvertToByte(byte0);
+                         byte byteRes1 = ConvertToByte(byte1);
+                         byte byteRes2 = ConvertToByte(byte2);
+                         byte byteRes3 = ConvertToByte(byte3);
+
+                         comTVK1.DATA[6] = byteRes3;
+                         comTVK1.DATA[7] = byteRes2;
+                         comTVK1.DATA[8] = byteRes1;
+                         comTVK1.DATA[9] = byteRes0;
+                         comTVK1.DATA[10] = 0xFF;
+                         TVK1DataChanged = false;
+                     }
+                     if (camAutoFocusSend)
+                     {
+                         if ((bool)checkBoxTVK1CAM_FocusAuto.IsChecked)
+                         {
+                             if (TVK1DataChanged)
+                                 comTVK1.DATA[1] = ++Cin;
+                             comTVK1.DATA[2] = 0x81;
+                             comTVK1.DATA[3] = 0x01;
+                             comTVK1.DATA[4] = 0x04;
+                             comTVK1.DATA[5] = 0x38;
+                             comTVK1.DATA[6] = 0x02;
+                             comTVK1.DATA[7] = 0xFF;
+                             TVK1DataChanged = false;
+                         }
+                         else
+                         {
+                             if (TVK1DataChanged)
+                                 comTVK1.DATA[1] = ++Cin;
+                             comTVK1.DATA[2] = 0x81;
+                             comTVK1.DATA[3] = 0x01;
+                             comTVK1.DATA[4] = 0x04;
+                             comTVK1.DATA[5] = 0x38;
+                             comTVK1.DATA[6] = 0x03;
+                             comTVK1.DATA[7] = 0xFF;
+                             TVK1DataChanged = false;
+                         }
+                     }
+
+                     buf_chksum_all[0] = comTVK1.START;
+                     buf_chksum_all[1] = comTVK1.ADDRESS;
+                     buf_chksum_all[2] = comTVK1.LENGTH[0];
+                     buf_chksum_all[3] = comTVK1.LENGTH[1];
+
+                     byte[] byteArray = BitConverter.GetBytes(chksm);
+
+                     buf_chksum_all[4] = byteArray[1];
+                     buf_chksum_all[5] = byteArray[0];
+
+                     buf_chksum_all[6] = comTVK1.DATA[0];
+                     buf_chksum_all[7] = comTVK1.DATA[1];
+                     buf_chksum_all[8] = comTVK1.DATA[2];
+                     buf_chksum_all[9] = comTVK1.DATA[3];
+                     buf_chksum_all[10] = comTVK1.DATA[4];
+                     buf_chksum_all[11] = comTVK1.DATA[5];
+                     buf_chksum_all[12] = comTVK1.DATA[6];
+                     buf_chksum_all[13] = comTVK1.DATA[7];
+                     buf_chksum_all[14] = comTVK1.DATA[8];
+                     buf_chksum_all[15] = comTVK1.DATA[9];
+                     buf_chksum_all[16] = comTVK1.DATA[10];
+                     buf_chksum_all[17] = comTVK1.DATA[11];
+                     buf_chksum_all[18] = comTVK1.DATA[12];
+                     buf_chksum_all[19] = comTVK1.DATA[13];
+                     buf_chksum_all[20] = comTVK1.DATA[14];
+                     buf_chksum_all[21] = comTVK1.DATA[15];
+                     buf_chksum_all[22] = comTVK1.DATA[16];
+                     buf_chksum_all[23] = comTVK1.DATA[17];
+
+                     ushort chksm2 = (ushort)CheckSumRFC1071(buf_chksum_all, 24);
+                     comTVK1.CHECKSUM2 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_all, 24));
+
+                     Dispatcher.BeginInvoke(new Action(delegate
+                     {
+                         lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
+                     }));
+
+                     uart.SendCommand(comTVK1);
+                     numOfPocket++;
+                     //if (!isThereAnotherActiveDevice(cycleIndex))//выкинул проверку, вроде работает !
+                        setTagUartReceived(false);
+                     //tagUartReceivedInterm = false;
+
+                     currentDevice = Device.MU_GSP;
+                 }
+                 //ТВК1 END
+
+                 //ТВК2
+                 if (TVK2InfExchangeONOFF && getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 2)
+                 {
+                     comTVK2.DiscardDataBuf();
+                     byte[] byteArray;
+                     BitArray bitArray = new BitArray(8);
+                     byte[] buf_chksum_header = new byte[4];
+                     byte[] buf_chksum_all = new byte[28];//полная длина пакета 30 - 2 байта (длина чексуммы 2)
+
+
+                     comTVK2.START = st_out.START;
+                     comTVK2.ADDRESS = 13;
+                     comTVK2.LENGTH[0] = 11;//длина пакета 22 байта для камеры ТВК2 (22/2 т.к измерение длины в word - 2 байта)
+                     comTVK2.LENGTH[1] = 0;
+
+                     buf_chksum_header[0] = comTVK2.START;
+                     buf_chksum_header[1] = comTVK2.ADDRESS;
+                     buf_chksum_header[2] = comTVK2.LENGTH[0];
+                     buf_chksum_header[3] = comTVK2.LENGTH[1];
+
+                     ushort chksm = (ushort)CheckSumRFC1071(buf_chksum_header, 4);
+                     comTVK2.CHECKSUM1 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_header, 4));
+
+                     bitArray.SetAll(false);
+
+                     if (st_outTVK2.POWER)
+                         bitArray.Set(0, true);
+                     else
+                         bitArray.Set(0, false);
+                     if (st_outTVK2.VIDEO_OUT_EN)
+                         bitArray.Set(1, true);
+                     else
+                         bitArray.Set(1, false);
+                     if (st_outTVK2.EXPO_MODE)
+                         bitArray.Set(2, true);
+                     else
+                         bitArray.Set(2, false);
+                     if (st_outTVK2.CONTRAST_MODE)
+                         bitArray.Set(3, true);
+                     else
+                         bitArray.Set(3, false);
+                     if (st_outTVK2.CAPTURE_MODE == 0)
+                     {
+                         bitArray.Set(4, false);
+                         bitArray.Set(5, false);
+                     }
+                     if (st_outTVK2.CAPTURE_MODE == 1)
+                     {
+                         bitArray.Set(4, true);
+                         bitArray.Set(5, false);
+                     }
+                     if (st_outTVK2.CAPTURE_MODE == 2)
+                     {
+                         bitArray.Set(4, false);
+                         bitArray.Set(5, true);
+                     }
+
+                     if (st_outTVK2.HDR_MODE == 0)
+                     {
+                         bitArray.Set(6, false);
+                         bitArray.Set(7, false);
+                     }
+                     if (st_outTVK2.HDR_MODE == 1)
+                     {
+                         bitArray.Set(6, true);
+                         bitArray.Set(7, false);
+                     }
+                     if (st_outTVK2.HDR_MODE == 2)
+                     {
+                         bitArray.Set(6, false);
+                         bitArray.Set(7, true);
+                     }
+
+                     comTVK2.DATA[0] = ConvertToByte(bitArray);
+
+                     byteArray = BitConverter.GetBytes(st_outTVK2.CONTRAST_GAIN);
+                     comTVK2.DATA[1] = byteArray[0];
+                     comTVK2.DATA[2] = byteArray[1];
+
+                     byteArray = BitConverter.GetBytes(st_outTVK2.CONTRAST_OFFSET);
+                     comTVK2.DATA[3] = byteArray[0];
+                     comTVK2.DATA[4] = byteArray[1];
+
+                     if (st_outTVK2.CAPTURE_MODE == 0)
+                     {
+                         UInt16 val = 0x0591;
+                         byteArray = BitConverter.GetBytes(val);
+                         comTVK2.DATA[5] = byteArray[0];
+                         comTVK2.DATA[6] = byteArray[1];
+                         comTVK2.DATA[7] = byteArray[0];
+                         comTVK2.DATA[8] = byteArray[1];
+
+                         bitArray.SetAll(false);
+                         bitArray.Set(3, true);//115 регистр = 0х0008
+                         bitArray.Set(4, true);//116 регистр = 03
+                         bitArray.Set(5, true);//116 регистр = 03
+
+                         comTVK2.DATA[9] = ConvertToByte(bitArray);
+
+                         val = 0x00e6;//116 регистр = e6
+                         byteArray = BitConverter.GetBytes(val);
+                         comTVK2.DATA[10] = byteArray[0];
+
+                         val = 0x6040;
+                         byteArray = BitConverter.GetBytes(val);
+                         comTVK2.DATA[20] = byteArray[0];
+                         comTVK2.DATA[21] = byteArray[1];
+                     }
+                     if (st_outTVK2.CAPTURE_MODE == 1)
+                     {
+                         UInt16 val = 0x0776;
+                         byteArray = BitConverter.GetBytes(val);
+                         comTVK2.DATA[5] = byteArray[0];
+                         comTVK2.DATA[6] = byteArray[1];
+                         comTVK2.DATA[7] = byteArray[0];
+                         comTVK2.DATA[8] = byteArray[1];
+
+                         bitArray.SetAll(false);
+                         bitArray.Set(0, true);//115 регистр = 0х0000
+                         bitArray.Set(4, true);//116 регистр = 03
+                         bitArray.Set(5, true);//116 регистр = 03
+
+                         comTVK2.DATA[9] = ConvertToByte(bitArray);
+
+                         val = 0x00e6;//116 регистр = e6
+                         byteArray = BitConverter.GetBytes(val);
+                         comTVK2.DATA[10] = byteArray[0];
+
+                         val = 0x6040;
+                         byteArray = BitConverter.GetBytes(val);
+                         comTVK2.DATA[20] = byteArray[0];
+                         comTVK2.DATA[21] = byteArray[1];
+                     }
+
+                     byte[] byteArrayEXPOSURE = BitConverter.GetBytes(st_outTVK2.EXPOSURE);
+                     comTVK2.DATA[11] = byteArrayEXPOSURE[0];
+                     comTVK2.DATA[12] = byteArrayEXPOSURE[1];
+                     comTVK2.DATA[13] = byteArrayEXPOSURE[2];
+                     byte[] byteArrayHDR_EXPOSURE1 = BitConverter.GetBytes(st_outTVK2.HDR_EXPOSURE1);
+                     comTVK2.DATA[14] = byteArrayHDR_EXPOSURE1[0];
+                     comTVK2.DATA[15] = byteArrayHDR_EXPOSURE1[1];
+                     comTVK2.DATA[16] = byteArrayHDR_EXPOSURE1[2];
+                     byte[] byteArrayHDR_EXPOSURE2 = BitConverter.GetBytes(st_outTVK2.HDR_EXPOSURE2);
+                     comTVK2.DATA[17] = byteArrayHDR_EXPOSURE2[0];
+                     comTVK2.DATA[18] = byteArrayHDR_EXPOSURE2[1];
+                     comTVK2.DATA[19] = byteArrayHDR_EXPOSURE2[2];
+
+
+                     buf_chksum_all[0] = comTVK2.START;
+                     buf_chksum_all[1] = comTVK2.ADDRESS;
+                     buf_chksum_all[2] = comTVK2.LENGTH[0];
+                     buf_chksum_all[3] = comTVK2.LENGTH[1];
+
+                     byte[] byteArraychksm = BitConverter.GetBytes(chksm);
+
+                     buf_chksum_all[4] = byteArraychksm[1];
+                     buf_chksum_all[5] = byteArraychksm[0];
+
+                     buf_chksum_all[6] = comTVK2.DATA[0];
+                     buf_chksum_all[7] = comTVK2.DATA[1];
+                     buf_chksum_all[8] = comTVK2.DATA[2];
+                     buf_chksum_all[9] = comTVK2.DATA[3];
+                     buf_chksum_all[10] = comTVK2.DATA[4];
+                     buf_chksum_all[11] = comTVK2.DATA[5];
+                     buf_chksum_all[12] = comTVK2.DATA[6];
+                     buf_chksum_all[13] = comTVK2.DATA[7];
+                     buf_chksum_all[14] = comTVK2.DATA[8];
+                     buf_chksum_all[15] = comTVK2.DATA[9];
+                     buf_chksum_all[16] = comTVK2.DATA[10];
+                     buf_chksum_all[17] = comTVK2.DATA[11];
+                     buf_chksum_all[18] = comTVK2.DATA[12];
+                     buf_chksum_all[19] = comTVK2.DATA[13];
+                     buf_chksum_all[20] = comTVK2.DATA[14];
+                     buf_chksum_all[21] = comTVK2.DATA[15];
+                     buf_chksum_all[22] = comTVK2.DATA[16];
+                     buf_chksum_all[23] = comTVK2.DATA[17];
+                     buf_chksum_all[24] = comTVK2.DATA[18];
+                     buf_chksum_all[25] = comTVK2.DATA[19];
+                     buf_chksum_all[26] = comTVK2.DATA[20];
+                     buf_chksum_all[27] = comTVK2.DATA[21];
+
+                     ushort chksm2 = (ushort)CheckSumRFC1071(buf_chksum_all, 28);
+                     comTVK2.CHECKSUM2 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_all, 28));
+
+                     Dispatcher.BeginInvoke(new Action(delegate
+                     {
+                         lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
+                     }));
+
+                     uart.SendCommand(comTVK2);
+                     numOfPocket++;
+                     //if (!isThereAnotherActiveDevice(cycleIndex))//выкинул проверку, вроде работает !
+                        setTagUartReceived(false);
+                     //tagUartReceivedInterm = false;
+                     //Debug.WriteLine("ТВК2 -- MainWindow.InitSendCommand(), cycleIndex: {0}.", cycleIndex);
+                     //Debug.WriteLine("ТВК2 -- MainWindow.InitSendCommand(), tagUartReceived: {0}.", getTagUartReceived());
+
+                     currentDevice = Device.MU_GSP;
+                 }             
+                 //ТВК2 END
+
+                 //ТПВК
+                 if (TPVKInfExchangeONOFF && getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 3)
+                 {
+                     comTPVK.DiscardDataBuf();
+                     byte[] byteArray;
+                     BitArray bitArray = new BitArray(8);
+                     byte[] buf_chksum_header = new byte[4];
+                     byte[] buf_chksum_all = new byte[22];//полная длина пакета 24 - 2 байта (длина чексуммы 2)
+
+
+                     comTPVK.START = st_out.START;
+                     comTPVK.ADDRESS = 14;
+                     comTPVK.LENGTH[0] = 7;//длина пакета 13 байт для камеры ТПВК
+                     comTPVK.LENGTH[1] = 0;
+
+                     buf_chksum_header[0] = comTPVK.START;
+                     buf_chksum_header[1] = comTPVK.ADDRESS;
+                     buf_chksum_header[2] = comTPVK.LENGTH[0];
+                     buf_chksum_header[3] = comTPVK.LENGTH[1];
+
+                     ushort chksm = (ushort)CheckSumRFC1071(buf_chksum_header, 4);
+                     comTPVK.CHECKSUM1 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_header, 4));
+
+                     //////////
+                     bitArray.SetAll(false);
+
+                     /*if (st_outTVK2.POWER)
+                         bitArray.Set(0, true);
+                     else
+                         bitArray.Set(0, false);
+                     if (st_outTVK2.VIDEO_OUT_EN)
+                         bitArray.Set(1, true);
+                     else
+                         bitArray.Set(1, false);*/
+
+
+                     comTPVK.DATA[0] = ConvertToByte(bitArray);
+
+                     byteArray = BitConverter.GetBytes(st_outTVK2.CONTRAST_GAIN);
+                     comTPVK.DATA[1] = byteArray[0];
+                     comTPVK.DATA[2] = byteArray[1];
+
+                     byteArray = BitConverter.GetBytes(st_outTVK2.CONTRAST_OFFSET);
+                     comTPVK.DATA[3] = byteArray[0];
+                     comTPVK.DATA[4] = byteArray[1];
+                     ////
+
+                     comTPVK.DATA[0] = 0;
+                     comTPVK.DATA[1] = 0;
+                     comTPVK.DATA[2] = 0;
+                     comTPVK.DATA[3] = 0;
+                     comTPVK.DATA[4] = 0;
+                     comTPVK.DATA[5] = 0;
+                     comTPVK.DATA[6] = 0;
+                     comTPVK.DATA[7] = 0;
+                     comTPVK.DATA[8] = 0;
+                     comTPVK.DATA[9] = 0;
+                     comTPVK.DATA[10] = 0;
+                     comTPVK.DATA[11] = 0;
+                     comTPVK.DATA[12] = 0;
+
+                     buf_chksum_all[0] = comTPVK.START;
+                     buf_chksum_all[1] = comTPVK.ADDRESS;
+                     buf_chksum_all[2] = comTPVK.LENGTH[0];
+                     buf_chksum_all[3] = comTPVK.LENGTH[1];
+
+                     byte[] byteArray2 = BitConverter.GetBytes(chksm);
+
+                     buf_chksum_all[4] = byteArray2[1];
+                     buf_chksum_all[5] = byteArray2[0];
+
+                     buf_chksum_all[6] = comTPVK.DATA[0];
+                     buf_chksum_all[7] = comTPVK.DATA[1];
+                     buf_chksum_all[8] = comTPVK.DATA[2];
+                     buf_chksum_all[9] = comTPVK.DATA[3];
+                     buf_chksum_all[10] = comTPVK.DATA[4];
+                     buf_chksum_all[11] = comTPVK.DATA[5];
+                     buf_chksum_all[12] = comTPVK.DATA[6];
+                     buf_chksum_all[13] = comTPVK.DATA[7];
+                     buf_chksum_all[14] = comTPVK.DATA[8];
+                     buf_chksum_all[15] = comTPVK.DATA[9];
+                     buf_chksum_all[16] = comTPVK.DATA[10];
+                     buf_chksum_all[17] = comTPVK.DATA[11];
+                     buf_chksum_all[18] = comTPVK.DATA[12];
+
+                     ushort chksm2 = (ushort)CheckSumRFC1071(buf_chksum_all, 19);
+                     comTPVK.CHECKSUM2 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_all, 19));
+
+                     Dispatcher.BeginInvoke(new Action(delegate
+                     {
+                         lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
+                     }));
+
+                     uart.SendCommand(comTPVK);
+                     numOfPocket++;
+                     //if (!isThereAnotherActiveDevice(cycleIndex))//выкинул проверку, вроде работает !
+                        setTagUartReceived(false);
+                     //tagUartReceivedInterm = false;
 
                     currentDevice = Device.MU_GSP;
                 }
 
-                //ЛД
-                //lock (locker)
-                //{
-                    if (LDInfExchangeONOFF && getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 4)
-                    {
-                        comLD.DiscardDataBuf();
-                        byte[] buf_chksum_header = new byte[4];
-                        byte[] buf_chksum_all = new byte[10];//полная длина пакета 12 - 2 байта (длина чексуммы 2)
+                 //ЛД             
+                 if (LDInfExchangeONOFF && getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 4)
+                 {
+                     comLD.DiscardDataBuf();
+                     byte[] buf_chksum_header = new byte[4];
+                     byte[] buf_chksum_all = new byte[10];//полная длина пакета 12 - 2 байта (длина чексуммы 2)
 
 
-                        comLD.START = st_out.START;
-                        comLD.ADDRESS = 15;
-                        comLD.LENGTH[0] = 2;//длина пакета 4 байт для ЛД
-                        comLD.LENGTH[1] = 0;
+                     comLD.START = st_out.START;
+                     comLD.ADDRESS = 15;
+                     comLD.LENGTH[0] = 2;//длина пакета 4 байт для ЛД
+                     comLD.LENGTH[1] = 0;
 
-                        buf_chksum_header[0] = comLD.START;
-                        buf_chksum_header[1] = comLD.ADDRESS;
-                        buf_chksum_header[2] = comLD.LENGTH[0];
-                        buf_chksum_header[3] = comLD.LENGTH[1];
+                     buf_chksum_header[0] = comLD.START;
+                     buf_chksum_header[1] = comLD.ADDRESS;
+                     buf_chksum_header[2] = comLD.LENGTH[0];
+                     buf_chksum_header[3] = comLD.LENGTH[1];
 
-                        ushort chksm = (ushort)CheckSumRFC1071(buf_chksum_header, 4);
-                        comLD.CHECKSUM1 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_header, 4));
+                     ushort chksm = (ushort)CheckSumRFC1071(buf_chksum_header, 4);
+                     comLD.CHECKSUM1 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_header, 4));
 
-                        comLD.DATA[0] = Convert.ToByte(st_outLD.POWER);
-                        if (LDCommandSend)//выполнить однократно команду отличную от 00h - нет команды
-                        {
-                            comLD.DATA[1] = st_outLD.COMMAND;
-                            st_outLD.COMMAND = 0x00;
-                            LDCommandSend = false;
-                        }
+                     comLD.DATA[0] = Convert.ToByte(st_outLD.POWER);
+                     if (LDCommandSend)//выполнить однократно команду отличную от 00h - нет команды
+                     {
+                         comLD.DATA[1] = st_outLD.COMMAND;
+                         st_outLD.COMMAND = 0x00;
+                         LDCommandSend = false;
+                     }
 
-                        sbyte byte3 = 0;
-                        if (st_outLD.BLOCK_LD)
-                            byte3 |= 1 << 0;
-                        else
-                            byte3 &= ~(1 << 0);
-                        if (st_outLD.BLOCK_FPU)
-                            byte3 |= 1 << 1;
-                        else
-                            byte3 &= ~(1 << 1);
-                        if (Convert.ToBoolean(st_outLD.REGIM_VARU))
-                            byte3 |= 1 << 2;
-                        else
-                            byte3 &= ~(1 << 2);
-                        comLD.DATA[2] = (byte)byte3;
+                     sbyte byte3 = 0;
+                     if (st_outLD.BLOCK_LD)
+                         byte3 |= 1 << 0;
+                     else
+                         byte3 &= ~(1 << 0);
+                     if (st_outLD.BLOCK_FPU)
+                         byte3 |= 1 << 1;
+                     else
+                         byte3 &= ~(1 << 1);
+                     if (Convert.ToBoolean(st_outLD.REGIM_VARU))
+                         byte3 |= 1 << 2;
+                     else
+                         byte3 &= ~(1 << 2);
+                     comLD.DATA[2] = (byte)byte3;
 
 
-                        BitArray bitArray = new BitArray(8);
-                        bitArray.SetAll(false);
+                     BitArray bitArray = new BitArray(8);
+                     bitArray.SetAll(false);
 
-                        if ((st_outLD.YARK_VYV_LD & 1 << 0) != 0)
-                            bitArray.Set(0, true);
-                        else
-                            bitArray.Set(0, false);
-                        if ((st_outLD.YARK_VYV_LD & 1 << 1) != 0)
-                            bitArray.Set(1, true);
-                        else
-                            bitArray.Set(1, false);
-                        if ((st_outLD.YARK_VYV_LD & 1 << 2) != 0)
-                            bitArray.Set(2, true);
-                        else
-                            bitArray.Set(2, false);
-                        if ((st_outLD.YARK_VYV_LD & 1 << 3) != 0)
-                            bitArray.Set(3, true);
-                        else
-                            bitArray.Set(3, false);
+                     if ((st_outLD.YARK_VYV_LD & 1 << 0) != 0)
+                         bitArray.Set(0, true);
+                     else
+                         bitArray.Set(0, false);
+                     if ((st_outLD.YARK_VYV_LD & 1 << 1) != 0)
+                         bitArray.Set(1, true);
+                     else
+                         bitArray.Set(1, false);
+                     if ((st_outLD.YARK_VYV_LD & 1 << 2) != 0)
+                         bitArray.Set(2, true);
+                     else
+                         bitArray.Set(2, false);
+                     if ((st_outLD.YARK_VYV_LD & 1 << 3) != 0)
+                         bitArray.Set(3, true);
+                     else
+                         bitArray.Set(3, false);
 
-                        if ((st_outLD.YARK_VYV_FPU & 1 << 0) != 0)
-                            bitArray.Set(4, true);
-                        else
-                            bitArray.Set(4, false);
-                        if ((st_outLD.YARK_VYV_FPU & 1 << 1) != 0)
-                            bitArray.Set(5, true);
-                        else
-                            bitArray.Set(5, false);
-                        if ((st_outLD.YARK_VYV_FPU & 1 << 2) != 0)
-                            bitArray.Set(6, true);
-                        else
-                            bitArray.Set(6, false);
-                        if ((st_outLD.YARK_VYV_FPU & 1 << 3) != 0)
-                            bitArray.Set(7, true);
-                        else
-                            bitArray.Set(7, false);
+                     if ((st_outLD.YARK_VYV_FPU & 1 << 0) != 0)
+                         bitArray.Set(4, true);
+                     else
+                         bitArray.Set(4, false);
+                     if ((st_outLD.YARK_VYV_FPU & 1 << 1) != 0)
+                         bitArray.Set(5, true);
+                     else
+                         bitArray.Set(5, false);
+                     if ((st_outLD.YARK_VYV_FPU & 1 << 2) != 0)
+                         bitArray.Set(6, true);
+                     else
+                         bitArray.Set(6, false);
+                     if ((st_outLD.YARK_VYV_FPU & 1 << 3) != 0)
+                         bitArray.Set(7, true);
+                     else
+                         bitArray.Set(7, false);
 
-                        comLD.DATA[3] = ConvertToByte(bitArray);
+                     comLD.DATA[3] = ConvertToByte(bitArray);
 
-                        buf_chksum_all[0] = comLD.START;
-                        buf_chksum_all[1] = comLD.ADDRESS;
-                        buf_chksum_all[2] = comLD.LENGTH[0];
-                        buf_chksum_all[3] = comLD.LENGTH[1];
+                     buf_chksum_all[0] = comLD.START;
+                     buf_chksum_all[1] = comLD.ADDRESS;
+                     buf_chksum_all[2] = comLD.LENGTH[0];
+                     buf_chksum_all[3] = comLD.LENGTH[1];
 
-                        byte[] byteArray = BitConverter.GetBytes(chksm);
+                     byte[] byteArray = BitConverter.GetBytes(chksm);
 
-                        buf_chksum_all[4] = byteArray[1];
-                        buf_chksum_all[5] = byteArray[0];
+                     buf_chksum_all[4] = byteArray[1];
+                     buf_chksum_all[5] = byteArray[0];
 
-                        buf_chksum_all[6] = comLD.DATA[0];
-                        buf_chksum_all[7] = comLD.DATA[1];
-                        buf_chksum_all[8] = comLD.DATA[2];
-                        buf_chksum_all[9] = comLD.DATA[3];
+                     buf_chksum_all[6] = comLD.DATA[0];
+                     buf_chksum_all[7] = comLD.DATA[1];
+                     buf_chksum_all[8] = comLD.DATA[2];
+                     buf_chksum_all[9] = comLD.DATA[3];
 
-                        ushort chksm2 = (ushort)CheckSumRFC1071(buf_chksum_all, 10);
-                        comLD.CHECKSUM2 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_all, 10));
+                     ushort chksm2 = (ushort)CheckSumRFC1071(buf_chksum_all, 10);
+                     comLD.CHECKSUM2 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_all, 10));
 
-                        Dispatcher.BeginInvoke(new Action(delegate
-                        {
-                            lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
-                        }));
+                     Dispatcher.BeginInvoke(new Action(delegate
+                     {
+                         lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
+                     }));
 
-                    uart.SendCommand(comLD);
-                        //Thread.Sleep(1);//поспим и подождем приема пакета
-                        if(!isThereAnotherActiveDevice(cycleIndex))
-                            setTagUartReceived(false); //tagUartReceived устанавливаем в false при ПЕРЕДАЧЕ пакета и ЖДЕМ приема пакета !
-                         //tagUartReceivedInterm = false;
-                         //Debug.WriteLine("ЛД -- MainWindow.InitSendCommand(), cycleIndex: {0}.", cycleIndex);
-                         //Debug.WriteLine("ЛД -- MainWindow.InitSendCommand(), tagUartReceived: {0}.", getTagUartReceived());
+                     uart.SendCommand(comLD);
+                     numOfPocket++;
 
-                         currentDevice = Device.MU_GSP;
-                    }//ЛД END
-                //}
+                     //if(!isThereAnotherActiveDevice(cycleIndex))//выкинул проверку, вроде работает !
+                        setTagUartReceived(false); //tagUartReceived устанавливаем в false при ПЕРЕДАЧЕ пакета и ЖДЕМ приема пакета !
+                     //tagUartReceivedInterm = false;
+                     //Debug.WriteLine("ЛД -- MainWindow.InitSendCommand(), cycleIndex: {0}.", cycleIndex);
+                     //Debug.WriteLine("ЛД -- MainWindow.InitSendCommand(), tagUartReceived: {0}.", getTagUartReceived());
 
-                //наращивать счетчик циклограммы в любом случае, даже если дивайс не участвует в инф. обмене
-                //tagUartReceived == true в самом начале циклограммы, а также ПО ПРИЕМУ пакета из uart
-                //хотя тут происходит гонка и tagUartReceived может быть как true так и false? устанавливается из разных потоков
-                //при ПЕРВОМ запуске tagUartReceived == true, далее пользователь нажимает ВКЛ ИНФ ОБМ С ЛД (ТВК1...), происходит передача пакета и пошел цикл...
-                //cycleIndex - это ТЕКУЩЕЕ устройство, с которым работает программа. и для него нужно ждать ответного пакета обязательно.
+                     currentDevice = Device.MU_GSP;
+                 }//ЛД END             
 
-                //если есть принятый пакет (tagUartReceived == true) - наращиваем cycleIndex и находим соответсвующее устройство в этом же методе InitSendCommand в цикле while(true) {}.
-                //после чего шлем пакет в InitSendCommand и
-                //устанавливаем tagUartReceived = false и ждем ответного пакета конкретно для этого устройства - cycleIndex НЕ наращивается до приема пакета (tagUartReceived == true)!!!
-                //tagUartReceived устанавливаем в false при ПЕРЕДАЧЕ пакета.
-                //tagUartReceived устанавливаем в true при ПРИЕМЕ пакета.
-                //далее цикл повторяется.  
+                 //наращивать счетчик циклограммы в любом случае, даже если дивайс не участвует в инф. обмене
+                 //tagUartReceived == true в самом начале циклограммы, а также ПО ПРИЕМУ пакета из uart
+                 //хотя тут происходит гонка и tagUartReceived может быть как true так и false? устанавливается из разных потоков
+                 //при ПЕРВОМ запуске tagUartReceived == true, далее пользователь нажимает ВКЛ ИНФ ОБМ С ЛД (ТВК1...), происходит передача пакета и пошел цикл...
+                 //cycleIndex - это ТЕКУЩЕЕ устройство, с которым работает программа. и для него нужно ждать ответного пакета обязательно.
 
-                tagUartReceivedInterm = getTagUartReceived();
-                //Debug.WriteLine("---> MainWindow.InitSendCommand(), tagUartReceived: {0}.", tagUartReceivedInterm); 
-                               
-                if (getTagUartReceived() == true)
-                        cycleIndex++;
+                 //если есть принятый пакет (tagUartReceived == true) - наращиваем cycleIndex и находим соответсвующее устройство в этом же методе InitSendCommand в цикле while(true) {}.
+                 //после чего шлем пакет в InitSendCommand и
+                 //устанавливаем tagUartReceived = false и ждем ответного пакета конкретно для этого устройства - cycleIndex НЕ наращивается до приема пакета (tagUartReceived == true)!!!
+                 //tagUartReceived устанавливаем в false при ПЕРЕДАЧЕ пакета.
+                 //tagUartReceived устанавливаем в true при ПРИЕМЕ пакета.
+                 //далее цикл повторяется.  
 
-                if (tagUartReceivedInterm != getTagUartReceived())//здесь уже произошел прием пакета данных
-                {
-                    //Debug.WriteLine("< -- ZOMG !!! MainWindow.InitSendCommand(), tagUartReceived: {0}.", getTagUartReceived());
-                    //Debug.WriteLine("< -- ZOMG !!! MainWindow.InitSendCommand(), cycleIndex: {0}.", cycleIndex);                    
-                }
-                if (cycleIndex > 7)
-                        cycleIndex = 0;
-                //tagUartReceivedInterm = getTagUartReceived();
-            }
-                //}));            
+                 tagUartReceivedInterm = getTagUartReceived();
+                 //Debug.WriteLine("---> MainWindow.InitSendCommand(), tagUartReceived: {0}.", tagUartReceivedInterm); 
+                        
+                 if (getTagUartReceived() == true)
+                         cycleIndex++;
+
+                 if (cycleIndex > 7)
+                         cycleIndex = 0;             
+                }        
         }
         void setTagUartReceived(bool val)
         {
