@@ -898,12 +898,9 @@ namespace MOSSimulator
                     string strStatusTVK2 = "";                    
                     //состояние READY
                     byte[] byteArr = new byte[1];
-                    byte[] byteArr2 = new byte[1];
                     byteArr[0] = com_in.DATA[0];
-                    byteArr2[0] = com_in.DATA[1];
 
                     BitArray bitArray = new BitArray(byteArr);
-                    BitArray bitArray2 = new BitArray(byteArr2);
 
                     Dispatcher.BeginInvoke(new Action(delegate
                     {
@@ -934,7 +931,164 @@ namespace MOSSimulator
                             strStatusTVK2 += "Режим захвата изображения: 1 - видео, центральная часть матрицы\n";
                         if (!bitArray.Get(4) && bitArray.Get(5))
                             strStatusTVK2 += "Режим захвата изображения: 2 - фото, вся матрица пиксель в пиксель\n";
+                        if (!bitArray.Get(6) && !bitArray.Get(7))
+                            strStatusTVK2 += "Режим HDR (только для ручного режима управления экспозицией): 0 - выключен\n";
+                        if (bitArray.Get(6) && !bitArray.Get(7))
+                            strStatusTVK2 += "Режим HDR (только для ручного режима управления экспозицией): 1 - interleaved read-out\n";
+                        if (!bitArray.Get(6) && bitArray.Get(7))
+                            strStatusTVK2 += "Режим HDR (только для ручного режима управления экспозицией): 2 - multiple slope\n";
 
+                        //получить CONTRAST_GAIN - число с фиксированной точкой 
+                        double contrastGain;
+                        int wholePart;
+                        int fractionPart;
+                        byte[] byteArrCONTRAST_GAIN = new byte[1];
+                        byte[] byteArrCONTRAST_GAIN2 = new byte[1];
+                        byte[] byteArrWholePartCONTRAST_GAIN = new byte[2];//2 байта для использования в BitConverter.ToUInt16()
+                        byte[] byteArrFractionPartCONTRAST_GAIN = new byte[2];//2 байта т.к. 9 бит и для использования в BitConverter.ToUInt16()
+
+
+                        byteArrCONTRAST_GAIN[0] = com_in.DATA[1];
+                        byteArrCONTRAST_GAIN2[0] = com_in.DATA[2];
+                        //старшие 7 бит - целая часть
+                        byteArrWholePartCONTRAST_GAIN[0] = byteArrCONTRAST_GAIN2[1];
+                        byteArrWholePartCONTRAST_GAIN[1] = byteArrCONTRAST_GAIN2[2];
+                        byteArrWholePartCONTRAST_GAIN[2] = byteArrCONTRAST_GAIN2[3];
+                        byteArrWholePartCONTRAST_GAIN[3] = byteArrCONTRAST_GAIN2[4];
+                        byteArrWholePartCONTRAST_GAIN[4] = byteArrCONTRAST_GAIN2[5];
+                        byteArrWholePartCONTRAST_GAIN[5] = byteArrCONTRAST_GAIN2[6];
+                        byteArrWholePartCONTRAST_GAIN[6] = byteArrCONTRAST_GAIN2[7];
+                        //младшие 9 бит - дробная часть
+                        byteArrFractionPartCONTRAST_GAIN[0] = byteArrCONTRAST_GAIN[0];
+                        byteArrFractionPartCONTRAST_GAIN[1] = byteArrCONTRAST_GAIN[1];
+                        byteArrFractionPartCONTRAST_GAIN[2] = byteArrCONTRAST_GAIN[2];
+                        byteArrFractionPartCONTRAST_GAIN[3] = byteArrCONTRAST_GAIN[3];
+                        byteArrFractionPartCONTRAST_GAIN[4] = byteArrCONTRAST_GAIN[4];
+                        byteArrFractionPartCONTRAST_GAIN[5] = byteArrCONTRAST_GAIN[5];
+                        byteArrFractionPartCONTRAST_GAIN[6] = byteArrCONTRAST_GAIN[6];
+                        byteArrFractionPartCONTRAST_GAIN[7] = byteArrCONTRAST_GAIN[7];
+                        byteArrFractionPartCONTRAST_GAIN[8] = byteArrCONTRAST_GAIN2[0];
+
+                        wholePart = BitConverter.ToUInt16(byteArrWholePartCONTRAST_GAIN, 0);
+                        fractionPart = BitConverter.ToUInt16(byteArrFractionPartCONTRAST_GAIN, 0);
+
+                        contrastGain = wholePart + fractionPart/1000.0;
+                        
+                        strStatusTVK2 += "Цифровое усиление блока контрастирования: "+ Convert.ToString(contrastGain)+ "\n";
+                        //END CONTRAST_GAIN
+
+                        byte[] byteArrCONTRAST_OFFSET = new byte[2];
+                        byteArrCONTRAST_OFFSET[0] = com_in.DATA[3];
+                        byteArrCONTRAST_OFFSET[1] = com_in.DATA[4];
+                        int contrastOffset = BitConverter.ToInt16(byteArrCONTRAST_OFFSET, 0);
+                        strStatusTVK2 += "Цифровое смещение блока контрастирования: " + Convert.ToString(BitConverter.ToInt16(byteArrCONTRAST_OFFSET, 0)) + "\n";
+
+                        byte[] byteArrCMV_OFFSET_BOT = new byte[2];
+                        byteArrCMV_OFFSET_BOT[0] = com_in.DATA[5];
+                        byteArrCMV_OFFSET_BOT[1] = com_in.DATA[6];
+                        strStatusTVK2 += "Состояние параметра Offset_bot матрицы cmosis (регистр 87): " + Convert.ToString(BitConverter.ToInt16(byteArrCMV_OFFSET_BOT, 0)) + "\n";
+                        //CMV_OFFSET_TOP
+                        byte[] CMV_OFFSET_TOP = new byte[2];
+                        CMV_OFFSET_TOP[0] = com_in.DATA[7];
+                        CMV_OFFSET_TOP[1] = com_in.DATA[8];
+                        strStatusTVK2 += "Состояние параметра Offset_bot матрицы cmosis (регистр 88): " + Convert.ToString(BitConverter.ToInt16(CMV_OFFSET_TOP, 0)) + "\n";
+                        
+                        //CMV_PGA_GAIN
+                        byte[] byte10 = new byte[1];
+                        byte[] arrCMV_PGA_GAIN = new byte[2];
+
+                        byte10[0] = com_in.DATA[9];
+                        BitArray bitArray10 = new BitArray(byte10);//создать битовый массив по байтовому массиву
+                        BitArray bitArrayCMV_PGA_GAIN = new BitArray(8);
+
+                        bitArrayCMV_PGA_GAIN.Set(0, bitArray10.Get(0));//получить значение нового битового массива по трем битам существующего
+                        bitArrayCMV_PGA_GAIN.Set(1, bitArray10.Get(1));
+                        bitArrayCMV_PGA_GAIN.Set(2, bitArray10.Get(2));
+
+                        arrCMV_PGA_GAIN[0] = ConvertToByte(bitArrayCMV_PGA_GAIN);//сконвертировать в байтовый массив
+                        strStatusTVK2 += "Состояние параметра PGA_gain матрицы cmosis (регистр 115): " + Convert.ToString(BitConverter.ToInt16(arrCMV_PGA_GAIN, 0)) + "\n";
+
+                        if(bitArray10.Get(3))
+                            strStatusTVK2 += "Состояние параметра PGA_div матрицы cmosis (регистр 115): true\n";
+                        else
+                            strStatusTVK2 += "Состояние параметра PGA_div матрицы cmosis (регистр 115): false\n";
+                        //CMV_ADC_RANGE_MULT
+                        byte[] arrByte10 = new byte[2];
+                        BitArray bitArrayCMV_ADC_RANGE_MULT = new BitArray(8);
+
+                        bitArrayCMV_ADC_RANGE_MULT.Set(0, bitArray10.Get(4));//получить значение нового битового массива по 2 битам существующего
+                        bitArrayCMV_ADC_RANGE_MULT.Set(1, bitArray10.Get(5));
+
+                        arrByte10[0] = ConvertToByte(bitArrayCMV_ADC_RANGE_MULT);//сконвертировать в байтовый массив
+                        strStatusTVK2 += "Состояние параметра ADC_range_mult матрицы cmosis (регистр 116): " + Convert.ToString(BitConverter.ToInt16(arrByte10, 0)) + "\n";
+                        //CMV_ADC_RANGE_MULT2
+                        byte[] arrByte102 = new byte[2];
+                        BitArray bitArrayCMV_ADC_RANGE_MULT2 = new BitArray(8);
+
+                        bitArrayCMV_ADC_RANGE_MULT2.Set(0, bitArray10.Get(6));//получить значение нового битового массива по 2 битам существующего
+                        bitArrayCMV_ADC_RANGE_MULT2.Set(1, bitArray10.Get(7));
+
+                        arrByte102[0] = ConvertToByte(bitArrayCMV_ADC_RANGE_MULT2);//сконвертировать в байтовый массив
+                        strStatusTVK2 += "Состояние параметра ADC_range_mult2 матрицы cmosis (регистр 116): " + Convert.ToString(BitConverter.ToInt16(arrByte102, 0)) + "\n";
+                        //CMV_ADC_range
+                        byte[] CMV_ADC_range = new byte[2];
+                        CMV_OFFSET_TOP[0] = com_in.DATA[10];
+                        
+                        strStatusTVK2 += "Состояние параметра ADC_range матрицы cmosis (регистр 116): " + Convert.ToString(BitConverter.ToInt16(CMV_ADC_range, 0)) + "\n";
+                        //EXPOSURE
+                        byte[] EXPOSURE = new byte[3];
+                        EXPOSURE[0] = com_in.DATA[11];
+                        EXPOSURE[1] = com_in.DATA[12];
+                        EXPOSURE[2] = com_in.DATA[13];
+
+                        strStatusTVK2 += "Значение времени экспозиции: " + Convert.ToString(BitConverter.ToInt32(EXPOSURE, 0)) + "\n";
+                        //HDR_EXPOSURE1
+                        byte[] HDR_EXPOSURE1 = new byte[3];
+                        EXPOSURE[0] = com_in.DATA[14];
+                        EXPOSURE[1] = com_in.DATA[15];
+                        EXPOSURE[1] = com_in.DATA[16];
+
+                        strStatusTVK2 += "Значение времени экспозиции (в режимах HDR): " + Convert.ToString(BitConverter.ToInt32(HDR_EXPOSURE1, 0)) + "\n";
+                        //HDR_EXPOSURE2
+                        byte[] HDR_EXPOSURE2 = new byte[3];
+                        HDR_EXPOSURE2[0] = com_in.DATA[17];
+                        HDR_EXPOSURE2[1] = com_in.DATA[18];
+                        HDR_EXPOSURE2[2] = com_in.DATA[19];
+
+                        strStatusTVK2 += "Значение времени экспозиции (в режиме HDR multiple slope): " + Convert.ToString(BitConverter.ToInt32(HDR_EXPOSURE2, 0)) + "\n";
+                        //////////
+                        byte[] byte21 = new byte[1];
+                        byte[] byte22 = new byte[1];
+                        byte[] byteCMV_VTFL2 = new byte[2];//2 байта для использования в BitConverter.ToUInt16()
+                        byte[] byteCMV_VTFL3 = new byte[2];//2 байта для использования в BitConverter.ToUInt16()
+                        byte[] byteCMV_NUMBER_SLOPES = new byte[2];//2 байта для использования в BitConverter.ToUInt16()                  
+
+                        byte21[0] = com_in.DATA[20];
+                        byte22[0] = com_in.DATA[21];
+                        
+                        byteCMV_VTFL2[0] = byte21[0];
+                        byteCMV_VTFL2[1] = byte21[1];
+                        byteCMV_VTFL2[2] = byte21[2];
+                        byteCMV_VTFL2[3] = byte21[3];
+                        byteCMV_VTFL2[4] = byte21[4];
+                        byteCMV_VTFL2[5] = byte21[5];
+                        byteCMV_VTFL2[6] = byte21[6];
+
+                        byteCMV_VTFL3[0] = byte22[7];
+                        byteCMV_VTFL3[1] = byte22[8];
+                        byteCMV_VTFL3[2] = byte22[9];
+                        byteCMV_VTFL3[3] = byte22[10];
+                        byteCMV_VTFL3[4] = byte22[11];
+                        byteCMV_VTFL3[5] = byte22[12];
+                        byteCMV_VTFL3[6] = byte22[13];
+                        
+                        byteCMV_NUMBER_SLOPES[0] = byte22[14];
+                        byteCMV_NUMBER_SLOPES[1] = byte22[15];
+
+                        strStatusTVK2 += "Значение параметра Vtfl2 матрицы cmosis (регистр 106): " + Convert.ToString(BitConverter.ToInt16(byteCMV_VTFL2, 0)) + "\n";
+                        strStatusTVK2 += "Значение параметра Vtfl3 матрицы cmosis (регистр 106): " + Convert.ToString(BitConverter.ToInt16(byteCMV_VTFL3, 0)) + "\n";
+                        strStatusTVK2 += "Значение параметра Number_slopes матрицы cmosis (регистр 79): " + Convert.ToString(BitConverter.ToInt16(byteCMV_NUMBER_SLOPES, 0)) + "\n";   
+                        ////////////
 
                         if (tvk2StatusWindow != null)
                         tvk2StatusWindow.fillData(strStatusTVK2);
