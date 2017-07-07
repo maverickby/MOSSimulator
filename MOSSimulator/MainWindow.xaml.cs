@@ -239,7 +239,7 @@ namespace MOSSimulator
             //joystickWindow = new JoystickWindow(this);
             gearMode = GearMode.OFF;
             NumJoystickK = 1;
-            JoystickZoneInsensibilityX = JoystickZoneInsensibilityY = 1000;
+            JoystickZoneInsensibilityX = JoystickZoneInsensibilityY = 2000;
             camZoomTeleVariableSend = false;
             camZoomWideVariableSend = false;
             camZoomStopSend = false;
@@ -610,6 +610,9 @@ namespace MOSSimulator
                 lblTimeOuts.Content = String.Format("Превыш. времени ожидания - {0}", cntTimeOuts.ToString()); 
              }));
 
+            //проверка на BAD_CHKSUM
+            if (com_in.result == CmdResult.BAD_CHKSUM1 || com_in.result == CmdResult.BAD_CHKSUM2)
+                return;
                 //проверка на отсутствие блока данных                
                 if (BitConverter.ToUInt16(com_in.LENGTH, 0) == 0)
                     return;
@@ -1036,28 +1039,31 @@ namespace MOSSimulator
                         
                         strStatusTVK2 += "Состояние параметра ADC_range матрицы cmosis (регистр 116): " + Convert.ToString(BitConverter.ToInt16(CMV_ADC_range, 0)) + "\n";
                         //EXPOSURE
-                        byte[] EXPOSURE = new byte[3];
+                        byte[] EXPOSURE = new byte[4];
                         EXPOSURE[0] = com_in.DATA[11];
                         EXPOSURE[1] = com_in.DATA[12];
                         EXPOSURE[2] = com_in.DATA[13];
+                        EXPOSURE[3] = 0;
 
                         strStatusTVK2 += "Значение времени экспозиции: " + Convert.ToString(BitConverter.ToInt32(EXPOSURE, 0)) + "\n";
                         //HDR_EXPOSURE1
-                        byte[] HDR_EXPOSURE1 = new byte[3];
-                        EXPOSURE[0] = com_in.DATA[14];
-                        EXPOSURE[1] = com_in.DATA[15];
-                        EXPOSURE[1] = com_in.DATA[16];
+                        byte[] HDR_EXPOSURE1 = new byte[4];
+                        HDR_EXPOSURE1[0] = com_in.DATA[14];
+                        HDR_EXPOSURE1[1] = com_in.DATA[15];
+                        HDR_EXPOSURE1[2] = com_in.DATA[16];
+                        HDR_EXPOSURE1[3] = 0;
 
                         strStatusTVK2 += "Значение времени экспозиции (в режимах HDR): " + Convert.ToString(BitConverter.ToInt32(HDR_EXPOSURE1, 0)) + "\n";
                         //HDR_EXPOSURE2
-                        byte[] HDR_EXPOSURE2 = new byte[3];
+                        byte[] HDR_EXPOSURE2 = new byte[4];
                         HDR_EXPOSURE2[0] = com_in.DATA[17];
                         HDR_EXPOSURE2[1] = com_in.DATA[18];
                         HDR_EXPOSURE2[2] = com_in.DATA[19];
+                        HDR_EXPOSURE2[3] = 0;
 
                         strStatusTVK2 += "Значение времени экспозиции (в режиме HDR multiple slope): " + Convert.ToString(BitConverter.ToInt32(HDR_EXPOSURE2, 0)) + "\n";
                         //////////
-                        byte[] byte21 = new byte[1];
+                        /*byte[] byte21 = new byte[1];
                         byte[] byte22 = new byte[1];
                         byte[] byteCMV_VTFL2 = new byte[2];//2 байта для использования в BitConverter.ToUInt16()
                         byte[] byteCMV_VTFL3 = new byte[2];//2 байта для использования в BitConverter.ToUInt16()
@@ -1087,7 +1093,7 @@ namespace MOSSimulator
 
                         strStatusTVK2 += "Значение параметра Vtfl2 матрицы cmosis (регистр 106): " + Convert.ToString(BitConverter.ToInt16(byteCMV_VTFL2, 0)) + "\n";
                         strStatusTVK2 += "Значение параметра Vtfl3 матрицы cmosis (регистр 106): " + Convert.ToString(BitConverter.ToInt16(byteCMV_VTFL3, 0)) + "\n";
-                        strStatusTVK2 += "Значение параметра Number_slopes матрицы cmosis (регистр 79): " + Convert.ToString(BitConverter.ToInt16(byteCMV_NUMBER_SLOPES, 0)) + "\n";   
+                        strStatusTVK2 += "Значение параметра Number_slopes матрицы cmosis (регистр 79): " + Convert.ToString(BitConverter.ToInt16(byteCMV_NUMBER_SLOPES, 0)) + "\n";   */
                         ////////////
 
                         if (tvk2StatusWindow != null)

@@ -17,9 +17,9 @@
         <Label x:Name="labelX" Content="X" HorizontalAlignment="Left" Margin="154,55,0,0" VerticalAlignment="Top"/>
         <Label x:Name="labelY" Content="Y" HorizontalAlignment="Left" Margin="246,55,0,0" VerticalAlignment="Top"/>
         <Label x:Name="labelTresholdHorizont" Content="Порог чувствительности, горизонт" HorizontalAlignment="Left" Margin="10,94,0,0" VerticalAlignment="Top"/>
-        <xctk:DoubleUpDown x:Name="numTresholdHorizont" Margin="217,97,0,0" Value="0" Increment="1" Text="1000" Maximum="65536" Minimum="0" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top"/>
+        <xctk:DoubleUpDown x:Name="numTresholdHorizont" Margin="217,97,0,0" Value="2000" Increment="1" Maximum="65536" Minimum="0" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" DefaultValue="2000" Text="2000"/>
         <Label x:Name="labelTresholdVertical" Content="Порог чувствительности, вертикаль" HorizontalAlignment="Left" Margin="10,119,0,0" VerticalAlignment="Top"/>
-        <xctk:DoubleUpDown x:Name="numTresholdVertical" Margin="217,122,0,0" Value="0" Increment="1" Text="1000" Maximum="65536" Minimum="0" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top"/>
+        <xctk:DoubleUpDown x:Name="numTresholdVertical" Margin="217,122,0,0" Value="2000" Increment="1" Text="2000" Maximum="65536" Minimum="0" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" DefaultValue="2000"/>
         <Button x:Name="buttonJoystickSettingsApply" Content="Применить" HorizontalAlignment="Left" Margin="268,0,0,10" Width="75" Height="25" VerticalAlignment="Bottom" Click="buttonJoystickSettingsApply_Click"/>
 
     </Grid>

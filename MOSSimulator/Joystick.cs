@@ -110,6 +110,8 @@ namespace MOSSimulator
             {
                 tmr.Stop();
             }
+            if (joystik == null)
+                return;
             joystik.Unacquire();
             
         }
