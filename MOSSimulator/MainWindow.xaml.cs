@@ -43,7 +43,7 @@ namespace MOSSimulator
         public StatusWindow tvk2StatusWindow;
         public StatusWindow tpvkStatusWindow;
         public Uart uart;
-        int cntStartErrors, cntTimeOuts, cntChkSums, numOfPocket, cntSuccess;
+        int cntStartErrors, cntTimeOuts, cntChkSums, numOfPocket, cntSuccess, cntOrderErrors;
         private Multimedia.Timer tmrExchange;//таймер для ПЕРЕДАЧИ
         MyJoystick myJoystick;
         public MOSSimulator.MyJoystick MyJoystick
@@ -90,15 +90,22 @@ namespace MOSSimulator
         "переход в заданное угловое положение с последующим слежением за заданным углом", "инициализация" };
 
         const int GSP_PACKET_SIZE = 18;
+        const int GSP_DATA_SIZE_IN = 12;
+        const int GSP_DATA_SIZE_OUT = 10;
+
         const double koeff_lsb_speed = 0.2197265625 / 3600;
 
         const int LD_DATA_SIZE_OUT = 4;
+        const int LD_DATA_SIZE_IN = 8;
         const int LD_PACKET_SIZE_OUT = 12;
         const int TVK2_DATA_SIZE_OUT = 22;
+        const int TVK2_DATA_SIZE_IN = 22;
         const int TVK2_PACKET_SIZE_OUT = 30;
-        const int TVK1_DATA_SIZE_OUT = 16;
-        const int TVK1_PACKET_SIZE_OUT = 24;
+        const int TVK1_DATA_SIZE_OUT = 18;
+        const int TVK1_DATA_SIZE_IN = 18;
+        const int TVK1_PACKET_SIZE_OUT = 26;
         const int TPVK_DATA_SIZE_OUT = 13;
+        const int TPVK_DATA_SIZE_IN = 20;
         const int TPVK_PACKET_SIZE_OUT = 21;
 
         double AZSpeed, ELSpeed;//хранение значений скоростей наведения при управлении джойстиком, значение в диапазоне 0..1
@@ -116,6 +123,12 @@ namespace MOSSimulator
         bool camFocusStopSend;
         bool camFocusDirectSend;
         bool camAutoFocusSend;
+
+        byte numTVK1ZoomTeleVariablePVal;
+        int numTVK1ZoomVal;
+        byte numTVK1FocusFarNearVariablePVal;
+        int numTVK1FocusVal;
+        bool checkBoxTVK1CAM_FocusAutoVal;
 
         bool LDCommandSend;
 
@@ -161,7 +174,7 @@ namespace MOSSimulator
         void Init()
         {
             components = new System.ComponentModel.Container();
-            cntChkSums = cntStartErrors = cntTimeOuts = numOfPocket = cntSuccess = 0;
+            cntChkSums = cntStartErrors = cntTimeOuts = numOfPocket = cntSuccess = cntOrderErrors = 0;
             Uart.FillComPorts(cbComPorts);
             com = new Cmd();
             comTVK1 = new CmdTVK1();
@@ -469,6 +482,7 @@ namespace MOSSimulator
                     if (uart.Open())
                     {
                         cntStartErrors = 0; cntTimeOuts = 0; cntChkSums = 0; numOfPocket = 0; cntSuccess = 0;
+                        cntOrderErrors = 0;
                         uart.received += uart_received;//подписка на событие приема received из класса UART
                         uart.showBufferWasSent += uart_bufferSent;
                         cbComPorts.IsEnabled = false;
@@ -513,6 +527,7 @@ namespace MOSSimulator
                 {
                     uart.DesetFalse();
                     cntStartErrors = 0; cntTimeOuts = 0; cntChkSums = 0; numOfPocket = 0; cntSuccess = 0;
+                    cntOrderErrors = 0;
 
                     //while (tmrExchange.IsRunning)
                     //    DoEvents(); //Application.DoEvents();
@@ -524,12 +539,13 @@ namespace MOSSimulator
                     setTagUartReceived(true);
                     uart.Close();
 
-                    lblSuccess.Content = String.Format("Усп. пакетов - {0}", cntSuccess.ToString());
-                    lblStatusUART.Content = String.Format("Статус обмена - {0}", "");
-                    lblStartErrors.Content = String.Format("Ошибки старт. байта - {0}", cntStartErrors.ToString());
-                    lblErrorChkSums.Content = String.Format("Ошибки контр. суммы - {0}", cntChkSums.ToString());
-                    lblTimeOuts.Content = String.Format("Превыш. времени ожидания - {0}", cntTimeOuts.ToString());
+                    lblSuccess.Content = String.Format("Усп. пакетов: {0}", cntSuccess.ToString());
+                    lblStatusUART.Content = String.Format("Статус обмена: {0}", "");
+                    lblStartErrors.Content = String.Format("Ошибки старт. байта: {0}", cntStartErrors.ToString());
+                    lblErrorChkSums.Content = String.Format("Ошибки контр. суммы: {0}", cntChkSums.ToString());
+                    lblTimeOuts.Content = String.Format("Превыш. времени ожидания: {0}", cntTimeOuts.ToString());
                     lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
+                    lblOrderErrors.Content = String.Format("Ошибки циклограммы: {0}", cntOrderErrors.ToString());                    
 
                     buttonStart.Content = "Старт";
                     buttonStart.Background = Brushes.LightGray;
@@ -538,7 +554,7 @@ namespace MOSSimulator
                 }
                 else//порт открыт И однократная посылка
                 {
-                    cntStartErrors = 0; cntTimeOuts = 0; cntChkSums = 0; numOfPocket = 0; cntSuccess = 0;
+                    cntStartErrors = 0; cntTimeOuts = 0; cntChkSums = 0; numOfPocket = 0; cntSuccess = 0; cntOrderErrors = 0;
                     uart.received += uart_received;
                     uart.showBufferWasSent += uart_bufferSent;
                     cbComPorts.IsEnabled = false;
@@ -603,12 +619,13 @@ namespace MOSSimulator
 
             Dispatcher.BeginInvoke(new Action(delegate
             {
-                lblSuccess.Content = String.Format("Усп. пакетов - {0}", cntSuccess.ToString());
-                lblStatusUART.Content = String.Format("Статус обмена - {0}", com_in.result.ToString());
-                lblStartErrors.Content = String.Format("Ошибки старт. байта - {0}", cntStartErrors.ToString());
-                lblErrorChkSums.Content = String.Format("Ошибки контр. суммы - {0}", cntChkSums.ToString());
-                lblTimeOuts.Content = String.Format("Превыш. времени ожидания - {0}", cntTimeOuts.ToString()); 
-             }));
+                lblSuccess.Content = String.Format("Усп. пакетов: {0}", cntSuccess.ToString());
+                lblStatusUART.Content = String.Format("Статус обмена: {0}", com_in.result.ToString());
+                lblStartErrors.Content = String.Format("Ошибки старт. байта: {0}", cntStartErrors.ToString());
+                lblErrorChkSums.Content = String.Format("Ошибки контр. суммы: {0}", cntChkSums.ToString());
+                lblTimeOuts.Content = String.Format("Превыш. времени ожидания: {0}", cntTimeOuts.ToString());
+                lblOrderErrors.Content = String.Format("Ошибки циклограммы: {0}", cntOrderErrors.ToString());
+            }));
 
             //проверка на BAD_CHKSUM
             if (com_in.result == CmdResult.BAD_CHKSUM1 || com_in.result == CmdResult.BAD_CHKSUM2)
@@ -621,7 +638,12 @@ namespace MOSSimulator
                 //режим работы привода азимута
                 if (MUGSPInfExchangeONOFF && (cycleIndex == 0 || cycleIndex == 2 || cycleIndex == 4 || cycleIndex == 6))
                 {
-                    int index = com_in.DATA[0];                    
+                    if (com_in.LENGTH[0] * 2 != GSP_DATA_SIZE_IN)
+                    {
+                        cntOrderErrors++;
+                        return;
+                    }
+                int index = com_in.DATA[0];                    
 
                 Dispatcher.BeginInvoke(new Action(delegate
                 {
@@ -866,7 +888,12 @@ namespace MOSSimulator
                 //ТВК 1
                 if (TVK1InfExchangeONOFF && cycleIndex == 1)
                 {
-                    string strStatusTVK1 = "";
+                    if (com_in.LENGTH[0] * 2 != TVK1_DATA_SIZE_IN)
+                    {
+                        cntOrderErrors++;
+                        return;
+                    }
+                string strStatusTVK1 = "";
                 
                     //состояние READY
                     byte[] byteArr = new byte[1];
@@ -885,7 +912,7 @@ namespace MOSSimulator
                             textBoxTVK1VIDEO_IN_STATE.Text += "данные не принимаются \n";
                         else
                             textBoxTVK1VIDEO_IN_STATE.Text += "данные принимаются \n";
-                        if (bitArray.Get(3))
+                        if (!bitArray.Get(3))
                             textBoxTVK1VIDEO_OUT_STATE_IN.Text += "данные не передаются\n";
                         else
                             textBoxTVK1VIDEO_OUT_STATE_IN.Text += "данные передаются\n";
@@ -898,6 +925,11 @@ namespace MOSSimulator
                 //ТВК 2
                 if (TVK2InfExchangeONOFF && cycleIndex == 3)
                 {
+                    if (com_in.LENGTH[0] * 2 != TVK2_DATA_SIZE_IN)
+                    {
+                        cntOrderErrors++;
+                        return;
+                    }
                     string strStatusTVK2 = "";                    
                     //состояние READY
                     byte[] byteArr = new byte[1];
@@ -942,7 +974,7 @@ namespace MOSSimulator
                             strStatusTVK2 += "Режим HDR (только для ручного режима управления экспозицией): 2 - multiple slope\n";
 
                         //получить CONTRAST_GAIN - число с фиксированной точкой 
-                        double contrastGain;
+                        /*double contrastGain;
                         int wholePart;
                         int fractionPart;
                         byte[] byteArrCONTRAST_GAIN = new byte[1];
@@ -977,7 +1009,7 @@ namespace MOSSimulator
 
                         contrastGain = wholePart + fractionPart/1000.0;
                         
-                        strStatusTVK2 += "Цифровое усиление блока контрастирования: "+ Convert.ToString(contrastGain)+ "\n";
+                        strStatusTVK2 += "Цифровое усиление блока контрастирования: "+ Convert.ToString(contrastGain)+ "\n";*/
                         //END CONTRAST_GAIN
 
                         byte[] byteArrCONTRAST_OFFSET = new byte[2];
@@ -1038,31 +1070,28 @@ namespace MOSSimulator
                         CMV_OFFSET_TOP[0] = com_in.DATA[10];
                         
                         strStatusTVK2 += "Состояние параметра ADC_range матрицы cmosis (регистр 116): " + Convert.ToString(BitConverter.ToInt16(CMV_ADC_range, 0)) + "\n";
-                        //EXPOSURE
-                        byte[] EXPOSURE = new byte[4];
+                        /*//EXPOSURE
+                        byte[] EXPOSURE = new byte[3];
                         EXPOSURE[0] = com_in.DATA[11];
                         EXPOSURE[1] = com_in.DATA[12];
                         EXPOSURE[2] = com_in.DATA[13];
-                        EXPOSURE[3] = 0;
 
                         strStatusTVK2 += "Значение времени экспозиции: " + Convert.ToString(BitConverter.ToInt32(EXPOSURE, 0)) + "\n";
                         //HDR_EXPOSURE1
-                        byte[] HDR_EXPOSURE1 = new byte[4];
-                        HDR_EXPOSURE1[0] = com_in.DATA[14];
-                        HDR_EXPOSURE1[1] = com_in.DATA[15];
-                        HDR_EXPOSURE1[2] = com_in.DATA[16];
-                        HDR_EXPOSURE1[3] = 0;
+                        byte[] HDR_EXPOSURE1 = new byte[3];
+                        EXPOSURE[0] = com_in.DATA[14];
+                        EXPOSURE[1] = com_in.DATA[15];
+                        EXPOSURE[1] = com_in.DATA[16];
 
                         strStatusTVK2 += "Значение времени экспозиции (в режимах HDR): " + Convert.ToString(BitConverter.ToInt32(HDR_EXPOSURE1, 0)) + "\n";
                         //HDR_EXPOSURE2
-                        byte[] HDR_EXPOSURE2 = new byte[4];
+                        byte[] HDR_EXPOSURE2 = new byte[3];
                         HDR_EXPOSURE2[0] = com_in.DATA[17];
                         HDR_EXPOSURE2[1] = com_in.DATA[18];
                         HDR_EXPOSURE2[2] = com_in.DATA[19];
-                        HDR_EXPOSURE2[3] = 0;
 
                         strStatusTVK2 += "Значение времени экспозиции (в режиме HDR multiple slope): " + Convert.ToString(BitConverter.ToInt32(HDR_EXPOSURE2, 0)) + "\n";
-                        //////////
+                        //////////*/
                         /*byte[] byte21 = new byte[1];
                         byte[] byte22 = new byte[1];
                         byte[] byteCMV_VTFL2 = new byte[2];//2 байта для использования в BitConverter.ToUInt16()
@@ -1104,7 +1133,12 @@ namespace MOSSimulator
                 //ТПВК
                 if (TPVKInfExchangeONOFF && cycleIndex == 5)
                 {
-                    string strStatusTPVK = "";
+                    if (com_in.LENGTH[0] * 2 != TPVK_DATA_SIZE_IN)
+                    {
+                        cntOrderErrors++;
+                        return;
+                    }
+                string strStatusTPVK = "";
                     //состояние READY
                     byte[] byteArr = new byte[1];
                     byte[] byteArr2 = new byte[1];
@@ -1129,8 +1163,13 @@ namespace MOSSimulator
                 //ЛД
                 if (LDInfExchangeONOFF && cycleIndex == 7)
                 {
-                    //состояние SOST
-                    byte[] byteArr = new byte[1];
+                    if (com_in.LENGTH[0] * 2 < LD_DATA_SIZE_IN || com_in.LENGTH[0] * 2 > 72)
+                    {
+                        cntOrderErrors++;
+                        return;
+                    }
+                //состояние SOST
+                byte[] byteArr = new byte[1];
                     byte[] byteArr2 = new byte[1];
                     byteArr[0] = com_in.DATA[1];
                     byteArr2[0] = com_in.DATA[2];
@@ -1380,11 +1419,12 @@ namespace MOSSimulator
             if (lblStatusUART.Foreground == Brushes.Red)
                 lblStatusUART.Foreground = Brushes.Black;
 
-            lblSuccess.Content = String.Format("Усп. пакетов - {0}", "");
-            lblStatusUART.Content = String.Format("Статус обмена - {0}", "");
-            lblStartErrors.Content = String.Format("Ошибки старт. байта - {0}", "");
-            lblErrorChkSums.Content = String.Format("Ошибки контр. суммы - {0}", "");
-            lblTimeOuts.Content = String.Format("Превыш. времени ожидания - {0}", "");
+            lblSuccess.Content = String.Format("Усп. пакетов: {0}", "");
+            lblStatusUART.Content = String.Format("Статус обмена: {0}", "");
+            lblStartErrors.Content = String.Format("Ошибки старт. байта: {0}", "");
+            lblErrorChkSums.Content = String.Format("Ошибки контр. суммы: {0}", "");
+            lblTimeOuts.Content = String.Format("Превыш. времени ожидания: {0}", "");
+            lblOrderErrors.Content = String.Format("Ошибки циклограммы: {0}", "");
 
             UartConnect();
             //InitSendCommand();
@@ -2685,9 +2725,22 @@ namespace MOSSimulator
         private void checkBoxmTVK2InfExchangeONOFF_Unchecked(object sender, RoutedEventArgs e)
         {
             //cycleIndex = 0;
-            setTagUartReceived(true);
+            //setTagUartReceived(true);
             arrayActiveDevicesInCycle[3] = false;
             activeDevicesArr[2] = false;
+
+            if (cycleIndex == 3)//анализ на именно этот дивайс (т.к. приложение многопоточное и значение cycleIndex может уже измениться в другом потоке)
+            {
+                int nextDeviceIndex = getNextActiveDeviceInCycle(cycleIndex);
+                if (nextDeviceIndex != -1)//если есть еще активные дивайсы
+                {
+                    cycleIndex = nextDeviceIndex;
+                    //setTagUartReceived(true);  -- НЕ изменять tag на true ! т.к. из информ. обмена выключается модуль, но он не должен мешать работе оставшихся !
+                }
+                else
+                    cycleIndex = 0;
+            }
+
             ControlChanged(sender, e);
         }
 
@@ -2703,9 +2756,22 @@ namespace MOSSimulator
 
         private void checkBoxmTVK1InfExchangeONOFF_Unchecked(object sender, RoutedEventArgs e)
         {
-            setTagUartReceived(true);
+            //setTagUartReceived(true);
             arrayActiveDevicesInCycle[1] = false;
             activeDevicesArr[1] = false;
+
+            if (cycleIndex == 1)//анализ на именно этот дивайс (т.к. приложение многопоточное и значение cycleIndex может уже измениться в другом потоке)
+            {
+                int nextDeviceIndex = getNextActiveDeviceInCycle(cycleIndex);
+                if (nextDeviceIndex != -1)//если есть еще активные дивайсы
+                {
+                    cycleIndex = nextDeviceIndex;
+                    //setTagUartReceived(true);  -- НЕ изменять tag на true ! т.к. из информ. обмена выключается модуль, но он не должен мешать работе оставшихся !
+                }
+                else
+                    cycleIndex = 0;
+            }
+
             ControlChanged(sender, e);
         }
 
@@ -2853,11 +2919,35 @@ namespace MOSSimulator
             return Index;
         }
 
+        private int getNextActiveDeviceInCycle(int currIndex)
+        {
+            int Index = -1;
+            bool bFound = false;
+            for (int i = currIndex + 1; i < 8; i++)
+                if (arrayActiveDevicesInCycle[i] == true)
+                {
+                    bFound = true;
+                    Index = i;
+                }
+            if(bFound==false)
+                for (int i = 0; i < currIndex; i++)
+                    if (arrayActiveDevicesInCycle[i] == true)
+                    {
+                        bFound = true;
+                        Index = i;
+                    }
+
+            return Index;
+        }
+
         /// <summary>
         /// заполнение отправляемого пакета
         /// </summary>
         private void InitSendCommand()
         {
+            int timeTVK1 = Environment.TickCount;
+            int timeTVK2 = Environment.TickCount;
+
             while (true)
             {
                  if (uart == null)
@@ -2961,11 +3051,15 @@ namespace MOSSimulator
 
                  currentDevice = Device.TVK1;
                  }
-                 //МУ ГСП END
+                //МУ ГСП END
 
-                 //ТВК1
-                 if (/*TVK1DataChanged && */TVK1InfExchangeONOFF && getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 1)
+                //ТВК1
+                if ((Environment.TickCount > timeTVK1 + 100) && TVK1InfExchangeONOFF && !getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 1)                
+                    setTagUartReceived(true);
+                
+                 if (TVK1InfExchangeONOFF && getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 1)
                  {
+                     timeTVK1 = Environment.TickCount;
                      comTVK1.DiscardDataBuf();
                      byte[] buf_chksum_header = new byte[4];
                      byte[] buf_chksum_all = new byte[24];//полная длина пакета 26 - 2 байта (длина чексуммы 2)
@@ -3048,7 +3142,7 @@ namespace MOSSimulator
                          comTVK1.DATA[5] = 0x07;
 
                          //get p 4 bits value
-                         byte iValZoomTeleVariableP = (byte)numTVK1ZoomTeleVariableP.Value;
+                         byte iValZoomTeleVariableP = numTVK1ZoomTeleVariablePVal;
                          byte[] myBytes = new byte[1];
                          myBytes[0] = iValZoomTeleVariableP;
                          BitArray bitArrayZoom = new BitArray(myBytes);
@@ -3081,7 +3175,7 @@ namespace MOSSimulator
                          comTVK1.DATA[4] = 0x04;
                          comTVK1.DATA[5] = 0x07;
                          //get p 4 bits value
-                         byte iValZoomTeleVariableP = (byte)numTVK1ZoomTeleVariableP.Value;
+                         byte iValZoomTeleVariableP = numTVK1ZoomTeleVariablePVal;
                          byte[] myBytes = new byte[1];
                          myBytes[0] = iValZoomTeleVariableP;
                          BitArray bitArrayZoom = new BitArray(myBytes);
@@ -3126,7 +3220,7 @@ namespace MOSSimulator
                          comTVK1.DATA[5] = 0x47;
 
                          //get pqrs 4 bits values
-                         int iValZoom = (int)numTVK1Zoom.Value;
+                         int iValZoom = numTVK1ZoomVal;
                          int[] myInts = new int[1];
                          myInts[0] = iValZoom;
                          BitArray bitArrayZoom = new BitArray(myInts);
@@ -3173,7 +3267,7 @@ namespace MOSSimulator
                          comTVK1.DATA[5] = 0x08;
 
                          //get p 4 bits value
-                         byte iValFocusFarVariableP = (byte)numTVK1FocusFarNearVariableP.Value;
+                         byte iValFocusFarVariableP = numTVK1FocusFarNearVariablePVal;
                          byte[] myBytes = new byte[1];
                          myBytes[0] = iValFocusFarVariableP;
                          BitArray bitArrayZoom = new BitArray(myBytes);
@@ -3206,7 +3300,7 @@ namespace MOSSimulator
                          comTVK1.DATA[5] = 0x08;
 
                          //get p 4 bits value
-                         byte iValFocusNearVariableP = (byte)numTVK1FocusFarNearVariableP.Value;
+                         byte iValFocusNearVariableP = numTVK1FocusFarNearVariablePVal;
                          byte[] myBytes = new byte[1];
                          myBytes[0] = iValFocusNearVariableP;
                          BitArray bitArrayZoom = new BitArray(myBytes);
@@ -3251,7 +3345,7 @@ namespace MOSSimulator
                          comTVK1.DATA[5] = 0x48;
 
                          //get pqrs 4 bits values
-                         int iValFocus = (int)numTVK1Focus.Value;
+                         int iValFocus = numTVK1FocusVal;
                          int[] myInts = new int[1];
                          myInts[0] = iValFocus;
                          BitArray bitArrayZoom = new BitArray(myInts);
@@ -3289,7 +3383,7 @@ namespace MOSSimulator
                      }
                      if (camAutoFocusSend)
                      {
-                         if ((bool)checkBoxTVK1CAM_FocusAuto.IsChecked)
+                         if (checkBoxTVK1CAM_FocusAutoVal)
                          {
                              if (TVK1DataChanged)
                                  comTVK1.DATA[1] = ++Cin;
@@ -3360,12 +3454,16 @@ namespace MOSSimulator
 
                      currentDevice = Device.MU_GSP;
                  }
-                 //ТВК1 END
+                //ТВК1 END
 
-                 //ТВК2
-                 if (TVK2InfExchangeONOFF && getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 2)
+                //ТВК2
+                if ((Environment.TickCount > timeTVK2 + 100) && TVK2InfExchangeONOFF && !getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 2)
+                    setTagUartReceived(true);
+
+                if (TVK2InfExchangeONOFF && getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 2)
                  {
-                     comTVK2.DiscardDataBuf();
+                    timeTVK2 = Environment.TickCount;
+                    comTVK2.DiscardDataBuf();
                      byte[] byteArray;
                      BitArray bitArray = new BitArray(8);
                      byte[] buf_chksum_header = new byte[4];
@@ -3807,6 +3905,12 @@ namespace MOSSimulator
                          cycleIndex = 0;             
                 }        
         }
+
+        //если есть принятый пакет (tagUartReceived == true) - наращиваем cycleIndex и находим соответсвующее устройство в этом же методе InitSendCommand в цикле while(true) {}.
+        //после чего шлем пакет в InitSendCommand и
+        //устанавливаем tagUartReceived = false и ждем ответного пакета конкретно для этого устройства - cycleIndex НЕ наращивается до приема пакета (tagUartReceived == true)!!!
+        //tagUartReceived устанавливаем в false при ПЕРЕДАЧЕ пакета.
+        //tagUartReceived устанавливаем в true при ПРИЕМЕ пакета.
         void setTagUartReceived(bool val)
         {
             lock (locker)
@@ -3866,6 +3970,12 @@ namespace MOSSimulator
         {
             if (st_out == null)
                 return;
+
+            numTVK1ZoomTeleVariablePVal = (byte)numTVK1ZoomTeleVariableP.Value;
+            numTVK1ZoomVal = (int)numTVK1Zoom.Value;
+            numTVK1FocusFarNearVariablePVal = (byte)numTVK1FocusFarNearVariableP.Value;
+            numTVK1FocusVal = (byte)numTVK1Focus.Value;
+            checkBoxTVK1CAM_FocusAutoVal = (bool)checkBoxTVK1CAM_FocusAuto.IsChecked;
 
             double AZValueConvD;
             double ELValueConvD;

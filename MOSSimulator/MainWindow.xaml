@@ -120,6 +120,7 @@
             <Label x:Name="lblTimeOuts" Content="Превыш. времени ожид.: " Width="224"/>
             <Label x:Name="lblErrorChkSums" Content="Ошибки контр. суммы: " Width="187"/>
             <Label x:Name="lblStartErrors" Content="Ошибки старт. байта: " Width="182"/>
+            <Label x:Name="lblOrderErrors" Content="Ошибки циклограммы: " Width="182"/>
         </StatusBar>
         <Button x:Name="buttonSendOnce" Content="Однократная посылка" HorizontalAlignment="Left" Margin="455,10,0,0" Grid.Row="1" VerticalAlignment="Top" Width="131" Click="buttonSendOnce_Click" RenderTransformOrigin="3.488,0.6"/>
         <GroupBox x:Name="groupBoxTVK1" Header="ТВК 1" HorizontalAlignment="Left" Margin="994,628,0,0" Grid.Row="1" VerticalAlignment="Top" Height="332" Width="663">

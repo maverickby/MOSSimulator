@@ -53,6 +53,10 @@ namespace MOSSimulator
             uart.StopBits = System.IO.Ports.StopBits.One;
             uart.Parity = System.IO.Ports.Parity.None;
             uart.BaudRate = 921600;
+            
+            //it does not apply to the DataReceived event
+            //uart.ReadTimeout = 1000;
+
             uart.DataReceived += DataReceived;//подписка на событие приема из SerialPort
 
 
