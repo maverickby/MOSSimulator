@@ -25,8 +25,8 @@ namespace MOSSimulator
         public CmdResult result;
 
         private byte[] buf;
-        const int TPVK_DATA_SIZE = 13;
-        const int TPVK_PACKET_SIZE = 21;
+        const int TPVK_DATA_SIZE = 11;
+        const int TPVK_PACKET_SIZE = 19; //data size (11) + 8 = 19
 
         public CmdTPVK()
         {
@@ -35,7 +35,7 @@ namespace MOSSimulator
             LENGTH = new byte[2];
             EVEN = false;
             CHECKSUM1 = 0;
-            DATA = new byte[TPVK_DATA_SIZE + 2];
+            DATA = new byte[TPVK_DATA_SIZE];
             for (int i = 0; i < DATA.Length; i++)
                 DATA[i] = 0;
 

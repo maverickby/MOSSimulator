@@ -47,6 +47,7 @@
             this.Controls.Add(this.listBoxLog);
             this.Name = "Log";
             this.TopMost = true;
+            this.Deactivate += new System.EventHandler(this.Log_Deactivate);
             this.ResumeLayout(false);
 
         }

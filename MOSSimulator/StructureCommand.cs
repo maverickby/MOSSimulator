@@ -197,6 +197,7 @@ namespace MOSSimulator
         public ushort CHECKSUM2;
 
         public bool POWER;
+        public bool VIDEO_OUT_EN;
 
         public byte START_CODE;
         public byte MODE_POLARITY__AUTO_CALIBRATION;
@@ -223,6 +224,7 @@ namespace MOSSimulator
             CHECKSUM2 = 0;
 
             POWER = false;
+            VIDEO_OUT_EN = false;
         }
     }
 

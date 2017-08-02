@@ -104,9 +104,9 @@ namespace MOSSimulator
         const int TVK1_DATA_SIZE_OUT = 18;
         const int TVK1_DATA_SIZE_IN = 18;
         const int TVK1_PACKET_SIZE_OUT = 26;
-        const int TPVK_DATA_SIZE_OUT = 13;
-        const int TPVK_DATA_SIZE_IN = 20;
-        const int TPVK_PACKET_SIZE_OUT = 21;
+        const int TPVK_DATA_SIZE_OUT = 11;
+        const int TPVK_DATA_SIZE_IN = 18;
+        const int TPVK_PACKET_SIZE_OUT = 19;
 
         double AZSpeed, ELSpeed;//хранение значений скоростей наведения при управлении джойстиком, значение в диапазоне 0..1
         int joystickZoneInsensibilityX, joystickZoneInsensibilityY;
@@ -124,11 +124,23 @@ namespace MOSSimulator
         bool camFocusDirectSend;
         bool camAutoFocusSend;
 
+        //необходимость послать Inquiry Command для камеры TVK1
+        bool CAM_ZoomPosInq;
+        bool CAM_FocusPosInq;
+        bool CAM_FocusModeInq;
+
+        int CinFocusPosInq;
+        int CinZoomPosInq;
+
         byte numTVK1ZoomTeleVariablePVal;
         int numTVK1ZoomVal;
         byte numTVK1FocusFarNearVariablePVal;
         int numTVK1FocusVal;
         bool checkBoxTVK1CAM_FocusAutoVal;
+
+        int TVK1FocusPosition;
+        int TVK1ZoomPosition;
+        string TVK1AutoFocus;        
 
         bool LDCommandSend;
 
@@ -265,6 +277,10 @@ namespace MOSSimulator
             Cin = Cout = 0;
             TVK1DataChanged = false;
 
+            CAM_ZoomPosInq =false;
+            CAM_FocusPosInq = false;
+            CAM_FocusModeInq = false;
+
             LDCommandSend = false;
             JoystickKeyboardsStates= new bool[4];
             activeDevicesArr = new bool[5];
@@ -274,7 +290,7 @@ namespace MOSSimulator
             arrayActiveDevicesInCycle = new bool[8];
             for (int i = 0; i < 8; i++)
                 arrayActiveDevicesInCycle[i] = false;
-            
+            TVK1AutoFocus = "Режим фокуса: автофокус\n";
         }
         private void Log_Click(object sender, RoutedEventArgs e)
         {
@@ -893,16 +909,16 @@ namespace MOSSimulator
                         cntOrderErrors++;
                         return;
                     }
-                string strStatusTVK1 = "";
-                
+                    string strStatusTVK1 = "";                    
+
                     //состояние READY
                     byte[] byteArr = new byte[1];
-                    byte[] byteArr2 = new byte[1];
+                    byte[] byteArr3 = new byte[1];
                     byteArr[0] = com_in.DATA[0];
-                    byteArr2[0] = com_in.DATA[1];
+                    byteArr3[0] = com_in.DATA[2];
 
                     BitArray bitArray = new BitArray(byteArr);
-                    BitArray bitArray2 = new BitArray(byteArr2);
+                    BitArray bitArray3 = new BitArray(byteArr3);
 
                     Dispatcher.BeginInvoke(new Action(delegate
                     {
@@ -917,6 +933,114 @@ namespace MOSSimulator
                         else
                             textBoxTVK1VIDEO_OUT_STATE_IN.Text += "данные передаются\n";
 
+                        //получить int из PQRS формата
+                        if (CAM_FocusPosInq && com_in.DATA[2] == 0x90 && com_in.DATA[3] == 0x50 && com_in.DATA[8] == 0xFF)
+                        {
+                            byte p = com_in.DATA[7];
+                            byte q = com_in.DATA[6];
+                            byte r = com_in.DATA[5];
+                            byte s = com_in.DATA[4];
+
+                            BitArray bitArrayFocusPos = new BitArray(16);
+                            
+                            byte[] myByteP = new byte[1];
+                            myByteP[0] = p;
+                            BitArray bitArrFocus0 = new BitArray(myByteP);
+                            byte[] myByteQ = new byte[1];
+                            myByteQ[0] = q;
+                            BitArray bitArrFocus1 = new BitArray(myByteQ);
+                            byte[] myByteR = new byte[1];
+                            myByteR[0] = r;
+                            BitArray bitArrFocus2 = new BitArray(myByteR);
+                            byte[] myByteS = new byte[1];
+                            myByteS[0] = s;
+                            BitArray bitArrFocus3 = new BitArray(myByteS);
+
+                            bitArrayFocusPos.Set(0, bitArrFocus0.Get(0));
+                            bitArrayFocusPos.Set(1, bitArrFocus0.Get(1));
+                            bitArrayFocusPos.Set(2, bitArrFocus0.Get(2));
+                            bitArrayFocusPos.Set(3, bitArrFocus0.Get(3));
+                            bitArrayFocusPos.Set(4, bitArrFocus1.Get(0));
+                            bitArrayFocusPos.Set(5, bitArrFocus1.Get(1));
+                            bitArrayFocusPos.Set(6, bitArrFocus1.Get(2));
+                            bitArrayFocusPos.Set(7, bitArrFocus1.Get(3));
+
+                            bitArrayFocusPos.Set(8, bitArrFocus2.Get(0));
+                            bitArrayFocusPos.Set(9, bitArrFocus2.Get(1));
+                            bitArrayFocusPos.Set(10, bitArrFocus2.Get(2));
+                            bitArrayFocusPos.Set(11, bitArrFocus2.Get(3));
+                            bitArrayFocusPos.Set(12, bitArrFocus3.Get(0));
+                            bitArrayFocusPos.Set(13, bitArrFocus3.Get(1));
+                            bitArrayFocusPos.Set(14, bitArrFocus3.Get(2));
+                            bitArrayFocusPos.Set(15, bitArrFocus3.Get(3));
+
+                            int[] arrayPQRS = new int[1];
+                            bitArrayFocusPos.CopyTo(arrayPQRS, 0);
+                            int PQRS = arrayPQRS[0];
+                            TVK1FocusPosition = PQRS;
+
+                            //strStatusTVK1 += "Focus Position: " + Convert.ToString(TVK1ZoomPosition) + "\n";
+                            CAM_FocusPosInq = false;
+                        }
+
+                        if (CAM_ZoomPosInq && com_in.DATA[2] == 0x90 && com_in.DATA[3] == 0x50 && com_in.DATA[8] == 0xFF)
+                        {
+                            byte p = com_in.DATA[7];
+                            byte q = com_in.DATA[6];
+                            byte r = com_in.DATA[5];
+                            byte s = com_in.DATA[4];
+
+                            BitArray bitArrayZoomPos = new BitArray(16);
+
+                            byte[] myByteP = new byte[1];
+                            myByteP[0] = p;
+                            BitArray bitArrZoom0 = new BitArray(myByteP);
+                            byte[] myByteQ = new byte[1];
+                            myByteQ[0] = q;
+                            BitArray bitArrZoom1 = new BitArray(myByteQ);
+                            byte[] myByteR = new byte[1];
+                            myByteR[0] = r;
+                            BitArray bitArrZoom2 = new BitArray(myByteR);
+                            byte[] myByteS = new byte[1];
+                            myByteS[0] = s;
+                            BitArray bitArrZoom3 = new BitArray(myByteS);
+
+                            bitArrayZoomPos.Set(0, bitArrZoom0.Get(0));
+                            bitArrayZoomPos.Set(1, bitArrZoom0.Get(1));
+                            bitArrayZoomPos.Set(2, bitArrZoom0.Get(2));
+                            bitArrayZoomPos.Set(3, bitArrZoom0.Get(3));
+                            bitArrayZoomPos.Set(4, bitArrZoom1.Get(0));
+                            bitArrayZoomPos.Set(5, bitArrZoom1.Get(1));
+                            bitArrayZoomPos.Set(6, bitArrZoom1.Get(2));
+                            bitArrayZoomPos.Set(7, bitArrZoom1.Get(3));
+
+                            bitArrayZoomPos.Set(8, bitArrZoom2.Get(0));
+                            bitArrayZoomPos.Set(9, bitArrZoom2.Get(1));
+                            bitArrayZoomPos.Set(10, bitArrZoom2.Get(2));
+                            bitArrayZoomPos.Set(11, bitArrZoom2.Get(3));
+                            bitArrayZoomPos.Set(12, bitArrZoom3.Get(0));
+                            bitArrayZoomPos.Set(13, bitArrZoom3.Get(1));
+                            bitArrayZoomPos.Set(14, bitArrZoom3.Get(2));
+                            bitArrayZoomPos.Set(15, bitArrZoom3.Get(3));
+
+                            int[] arrayPQRS = new int[1];
+                            bitArrayZoomPos.CopyTo(arrayPQRS, 0);
+                            int PQRS = arrayPQRS[0];
+                            TVK1ZoomPosition = PQRS;
+
+                            CAM_ZoomPosInq = false;
+                        }
+
+
+                        if (com_in.DATA[2]==0x90&& com_in.DATA[3] == 0x50&& com_in.DATA[4] == 0x02&& com_in.DATA[5] == 0xFF)
+                            TVK1AutoFocus = "Режим фокуса: автофокус\n";                        
+                        if (com_in.DATA[2] == 0x90 && com_in.DATA[3] == 0x50 && com_in.DATA[4] == 0x03 && com_in.DATA[5] == 0xFF)
+                            TVK1AutoFocus = "Режим фокуса: ручной\n";
+
+
+                        strStatusTVK1 += TVK1AutoFocus;
+                        strStatusTVK1 += "Zoom Position: " + Convert.ToString(TVK1ZoomPosition) + "\n";
+                        strStatusTVK1 += "Focus Position: " + Convert.ToString(TVK1FocusPosition) + "\n";
                         if (tvk1StatusWindow != null)
                             tvk1StatusWindow.fillData(strStatusTVK1);
                     }));
@@ -974,7 +1098,7 @@ namespace MOSSimulator
                             strStatusTVK2 += "Режим HDR (только для ручного режима управления экспозицией): 2 - multiple slope\n";
 
                         //получить CONTRAST_GAIN - число с фиксированной точкой 
-                        /*double contrastGain;
+                        double contrastGain;
                         int wholePart;
                         int fractionPart;
                         byte[] byteArrCONTRAST_GAIN = new byte[1];
@@ -985,31 +1109,60 @@ namespace MOSSimulator
 
                         byteArrCONTRAST_GAIN[0] = com_in.DATA[1];
                         byteArrCONTRAST_GAIN2[0] = com_in.DATA[2];
+                        BitArray bitArrWholePartCONTRAST_GAIN = new BitArray(byteArrCONTRAST_GAIN2);
+                        bitArrWholePartCONTRAST_GAIN.Set(7, false);
+
+                        BitArray bitArrFractionPartCONTRAST_GAIN = new BitArray(9);
+                        BitArray bitArr_ = new BitArray(byteArrCONTRAST_GAIN);
+
+                        bitArrFractionPartCONTRAST_GAIN.Set(0, bitArr_.Get(0));
+                        bitArrFractionPartCONTRAST_GAIN.Set(1, bitArr_.Get(1));
+                        bitArrFractionPartCONTRAST_GAIN.Set(2, bitArr_.Get(2));
+                        bitArrFractionPartCONTRAST_GAIN.Set(3, bitArr_.Get(3));
+                        bitArrFractionPartCONTRAST_GAIN.Set(4, bitArr_.Get(4));
+                        bitArrFractionPartCONTRAST_GAIN.Set(5, bitArr_.Get(5));
+                        bitArrFractionPartCONTRAST_GAIN.Set(6, bitArr_.Get(6));
+                        bitArrFractionPartCONTRAST_GAIN.Set(7, bitArr_.Get(7));
+                        byte byte_=com_in.DATA[2];
+                        if ((byte_ & 1<<0) != 0)
+                            bitArrFractionPartCONTRAST_GAIN.Set(8, true);
+
+
                         //старшие 7 бит - целая часть
-                        byteArrWholePartCONTRAST_GAIN[0] = byteArrCONTRAST_GAIN2[1];
+                        /*byteArrWholePartCONTRAST_GAIN[0] = byteArrCONTRAST_GAIN2[1];
                         byteArrWholePartCONTRAST_GAIN[1] = byteArrCONTRAST_GAIN2[2];
                         byteArrWholePartCONTRAST_GAIN[2] = byteArrCONTRAST_GAIN2[3];
                         byteArrWholePartCONTRAST_GAIN[3] = byteArrCONTRAST_GAIN2[4];
                         byteArrWholePartCONTRAST_GAIN[4] = byteArrCONTRAST_GAIN2[5];
                         byteArrWholePartCONTRAST_GAIN[5] = byteArrCONTRAST_GAIN2[6];
-                        byteArrWholePartCONTRAST_GAIN[6] = byteArrCONTRAST_GAIN2[7];
+                        byteArrWholePartCONTRAST_GAIN[6] = byteArrCONTRAST_GAIN2[7];*/
                         //младшие 9 бит - дробная часть
-                        byteArrFractionPartCONTRAST_GAIN[0] = byteArrCONTRAST_GAIN[0];
+                        /*byteArrFractionPartCONTRAST_GAIN[0] = byteArrCONTRAST_GAIN[0];
                         byteArrFractionPartCONTRAST_GAIN[1] = byteArrCONTRAST_GAIN[1];
                         byteArrFractionPartCONTRAST_GAIN[2] = byteArrCONTRAST_GAIN[2];
                         byteArrFractionPartCONTRAST_GAIN[3] = byteArrCONTRAST_GAIN[3];
                         byteArrFractionPartCONTRAST_GAIN[4] = byteArrCONTRAST_GAIN[4];
                         byteArrFractionPartCONTRAST_GAIN[5] = byteArrCONTRAST_GAIN[5];
                         byteArrFractionPartCONTRAST_GAIN[6] = byteArrCONTRAST_GAIN[6];
-                        byteArrFractionPartCONTRAST_GAIN[7] = byteArrCONTRAST_GAIN[7];
-                        byteArrFractionPartCONTRAST_GAIN[8] = byteArrCONTRAST_GAIN2[0];
+                        byteArrFractionPartCONTRAST_GAIN[7] = byteArrCONTRAST_GAIN[7];*/
+                        //byteArrFractionPartCONTRAST_GAIN[1] = byteArrCONTRAST_GAIN2[0];
+
+                        //int[] arrayPQRS = new int[1];
+                        //bitArrayFocusPos.CopyTo(arrayPQRS, 0);
 
                         wholePart = BitConverter.ToUInt16(byteArrWholePartCONTRAST_GAIN, 0);
                         fractionPart = BitConverter.ToUInt16(byteArrFractionPartCONTRAST_GAIN, 0);
 
+                        int[] array = new int[1];
+                        bitArrWholePartCONTRAST_GAIN.CopyTo(array, 0);
+                        wholePart = array[0];
+
+                        bitArrFractionPartCONTRAST_GAIN.CopyTo(array, 0);
+                        fractionPart = array[0];
+
                         contrastGain = wholePart + fractionPart/1000.0;
                         
-                        strStatusTVK2 += "Цифровое усиление блока контрастирования: "+ Convert.ToString(contrastGain)+ "\n";*/
+                        strStatusTVK2 += "Цифровое усиление блока контрастирования: "+ Convert.ToString(contrastGain)+ "\n";
                         //END CONTRAST_GAIN
 
                         byte[] byteArrCONTRAST_OFFSET = new byte[2];
@@ -1138,7 +1291,7 @@ namespace MOSSimulator
                         cntOrderErrors++;
                         return;
                     }
-                string strStatusTPVK = "";
+                    string strStatusTPVK = "";
                     //состояние READY
                     byte[] byteArr = new byte[1];
                     byte[] byteArr2 = new byte[1];
@@ -1209,9 +1362,9 @@ namespace MOSSimulator
                     if (bitArray2.Get(1))
                         strStatusLD += "нет запуска БВВ\n";
                     if (!bitArray2.Get(2))
-                        strStatusLD += "Режим БВВ (затвор): активный\n";
+                        strStatusLD += "Режим БВВ (затвор): 0 – активный\n";
                     else
-                        strStatusLD += "Режим БВВ (затвор): пассивный\n";
+                        strStatusLD += "Режим БВВ (затвор): 1 – пассивный\n";
 
                     if (!bitArray2.Get(3))
                         strStatusLD += "Серия БВВ: 0 – одиночный(Р max)\n";
@@ -1254,13 +1407,13 @@ namespace MOSSimulator
                     {
                         byte[] byteArr5 = new byte[2];
                         short[] arrDist = new short[valNUM_TARGET];
-                        List<LDTableTagetsDistances> result = new List<LDTableTagetsDistances>(valNUM_TARGET);
+                        List<LDTableTargetsDistances> result = new List<LDTableTargetsDistances>(valNUM_TARGET);
                         for (int i = 0; i < valNUM_TARGET; i++)
                         {
-                            byteArr5[0] = com_in.DATA[6 + i];
-                            byteArr5[1] = com_in.DATA[7 + i];
+                            byteArr5[0] = com_in.DATA[6 + i+2];
+                            byteArr5[1] = com_in.DATA[7 + i+2];
                             arrDist[i] = BitConverter.ToInt16(byteArr5, 0);
-                            result.Add(new LDTableTagetsDistances(i + 1, arrDist[i].ToString()));
+                            result.Add(new LDTableTargetsDistances(i + 1, arrDist[i].ToString()));
 
                         }
                         dataGridLDTargetsDistances.ItemsSource = result;
@@ -1562,9 +1715,22 @@ namespace MOSSimulator
         private void checkBoxLDONOFF_Unchecked(object sender, RoutedEventArgs e)
         {
             //cycleIndex = 0;
-            setTagUartReceived(true);
+            //setTagUartReceived(true);
             arrayActiveDevicesInCycle[7] = false;
             activeDevicesArr[4] = false;
+
+            if (cycleIndex == 7)//анализ на именно этот дивайс (т.к. приложение многопоточное и значение cycleIndex может уже измениться в другом потоке)
+            {
+                int nextDeviceIndex = getNextActiveDeviceInCycle(cycleIndex);
+                if (nextDeviceIndex != -1)//если есть еще активные дивайсы
+                {
+                    cycleIndex = nextDeviceIndex;
+                    //setTagUartReceived(true);  -- НЕ изменять tag на true ! т.к. из информ. обмена выключается модуль, но он не должен мешать работе оставшихся !
+                }
+                else
+                    cycleIndex = 0;
+            }
+
             ControlChanged(sender, e);
         }
 
@@ -2717,8 +2883,20 @@ namespace MOSSimulator
             arrayActiveDevicesInCycle[4] = false;
             arrayActiveDevicesInCycle[6] = false;
             activeDevicesArr[0] = false;
-            cycleIndex = 0;
-            setTagUartReceived(true);
+            //cycleIndex = 0;
+            //setTagUartReceived(true);
+            if (cycleIndex == 0 || cycleIndex == 2 || cycleIndex == 4 || cycleIndex == 6)//анализ на именно этот дивайс (т.к. приложение многопоточное и значение cycleIndex может уже измениться в другом потоке)
+            {
+                int nextDeviceIndex = getNextActiveDeviceInCycle(cycleIndex);
+                if (nextDeviceIndex != -1)//если есть еще активные дивайсы
+                {
+                    cycleIndex = nextDeviceIndex;
+                    //setTagUartReceived(true);  -- НЕ изменять tag на true ! т.к. из информ. обмена выключается модуль, но он не должен мешать работе оставшихся !
+                }
+                else
+                    cycleIndex = 0;
+            }
+
             ControlChanged(sender, e);
         }
 
@@ -2777,9 +2955,21 @@ namespace MOSSimulator
 
         private void checkBoxTPVKInfExchangeONOFF_Unchecked(object sender, RoutedEventArgs e)
         {
-            setTagUartReceived(true);
+            //setTagUartReceived(true);
             arrayActiveDevicesInCycle[5] = false;
             activeDevicesArr[3] = false;
+
+            if (cycleIndex == 5)//анализ на именно этот дивайс (т.к. приложение многопоточное и значение cycleIndex может уже измениться в другом потоке)
+            {
+                int nextDeviceIndex = getNextActiveDeviceInCycle(cycleIndex);
+                if (nextDeviceIndex != -1)//если есть еще активные дивайсы
+                {
+                    cycleIndex = nextDeviceIndex;
+                    //setTagUartReceived(true);  -- НЕ изменять tag на true ! т.к. из информ. обмена выключается модуль, но он не должен мешать работе оставшихся !
+                }
+                else
+                    cycleIndex = 0;
+            }
             ControlChanged(sender, e);
         }
 
@@ -2847,8 +3037,8 @@ namespace MOSSimulator
 
         private void dataGridLDTargetsDistances_Loaded(object sender, RoutedEventArgs e)
         {
-            List<LDTableTagetsDistances> result = new List<LDTableTagetsDistances>(3);
-            //result.Add(new LDTableTagetsDistances(1, 13456));
+            List<LDTableTargetsDistances> result = new List<LDTableTargetsDistances>(3);
+            //result.Add(new LDTableTargetsDistances(1, 13456));
             dataGridLDTargetsDistances.ItemsSource = result;
         }
 
@@ -2919,6 +3109,31 @@ namespace MOSSimulator
             return Index;
         }
 
+        private void checkBoxTPVKVIDEO_OUT_EN_Checked_1(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxTPVKVIDEO_OUT_EN_Unchecked_1(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxTPVKONOFF_Checked_1(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxTPVKONOFF_Unchecked_1(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxTPVKVIDEO_OUT_EN_Unchecked_2(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
         private int getNextActiveDeviceInCycle(int currIndex)
         {
             int Index = -1;
@@ -2945,18 +3160,25 @@ namespace MOSSimulator
         /// </summary>
         private void InitSendCommand()
         {
+            int timeMUGSP = Environment.TickCount;
             int timeTVK1 = Environment.TickCount;
             int timeTVK2 = Environment.TickCount;
+            int timeTPVK = Environment.TickCount;
+            int timeLD = Environment.TickCount;
 
             while (true)
             {
                  if (uart == null)
                      return;
-                 //numOfPocket++;
+                //numOfPocket++;
 
-                 //МУ ГСП            
-                 if (MUGSPInfExchangeONOFF && getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 0)
+                //МУ ГСП
+                if ((Environment.TickCount > timeMUGSP + 100) && MUGSPInfExchangeONOFF && !getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 0)
+                    setTagUartReceived(true);
+
+                if (MUGSPInfExchangeONOFF && getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 0)
                  {
+                     timeMUGSP = Environment.TickCount;
                      com.DiscardDataBuf();
                      byte[] buf_chksum_header = new byte[4];
                      byte[] buf_chksum_all = new byte[16];//полная длина пакета 18 - 2 байта (длина чексуммы 2)
@@ -3132,7 +3354,22 @@ namespace MOSSimulator
                          comTVK1.DATA[0] = ConvertToByte(bitArray);//Управляющий байт
                      }
 
-                     if (camZoomTeleVariableSend)
+                    if (CAM_ZoomPosInq)//послать запрос на получение значения зума
+                    {
+                        if (TVK1DataChanged)
+                            comTVK1.DATA[1] = ++Cin;
+                        comTVK1.DATA[2] = 0x81;
+                        comTVK1.DATA[3] = 0x09;
+                        comTVK1.DATA[4] = 0x04;
+                        comTVK1.DATA[5] = 0x47;
+                        comTVK1.DATA[6] = 0xFF;
+                        TVK1DataChanged = false;
+                        //установить в false при приеме, при подтверждении приема данных
+                        //CAM_ZoomPosInq = false;
+                        goto labelSendCommand;
+                    }
+
+                    if (camZoomTeleVariableSend)
                      {
                          if (TVK1DataChanged)
                              comTVK1.DATA[1] = ++Cin;
@@ -3164,11 +3401,14 @@ namespace MOSSimulator
 
                          //comTVK1.DATA[6] = 0x02;
                          comTVK1.DATA[7] = 0xFF;
-                         TVK1DataChanged = false;
-                     }
+                         //TVK1DataChanged = false;
+                         CAM_ZoomPosInq = true;//послать запрос на получение значения зума и не менять TVK1DataChanged на false тут, оно изменится при запросе
+                         camZoomTeleVariableSend = false;//сбросить признак, посылать пакет только 1 раз
+                         CinZoomPosInq = Cin;
+                    }
                      if (camZoomWideVariableSend)
-                     {
-                         if (TVK1DataChanged)
+                     {                        
+                        if (TVK1DataChanged)
                              comTVK1.DATA[1] = ++Cin;
                          comTVK1.DATA[2] = 0x81;
                          comTVK1.DATA[3] = 0x01;
@@ -3196,8 +3436,11 @@ namespace MOSSimulator
                          comTVK1.DATA[6] = byteRes0;
                          //comTVK1.DATA[6] = 0x03;
                          comTVK1.DATA[7] = 0xFF;
-                         TVK1DataChanged = false;
-                     }
+                        //TVK1DataChanged = false;
+                        CAM_ZoomPosInq = true;//послать запрос на получение значения зума и не менять TVK1DataChanged на false тут, оно изменится при запросе
+                        camZoomWideVariableSend = false;//сбросить признак, посылать пакет только 1 раз
+                        CinZoomPosInq = Cin;
+                    }
                      if (camZoomStopSend)
                      {
                          if (TVK1DataChanged)
@@ -3254,10 +3497,28 @@ namespace MOSSimulator
                          comTVK1.DATA[8] = byteRes1;
                          comTVK1.DATA[9] = byteRes0;
                          comTVK1.DATA[10] = 0xFF;
-                         TVK1DataChanged = false;
-                     }
+                         //TVK1DataChanged = false;
+                         CAM_ZoomPosInq = true;//послать запрос на получение значения зума и не менять TVK1DataChanged на false тут, оно изменится при запросе
+                         camZoomDirectSend = false;//сбросить признак, посылать пакет только 1 раз
+                         CinZoomPosInq = Cin;
+                    }
 
-                     if (camFocusFarVariableSend)
+                    if (CAM_FocusPosInq)//послать запрос на получение значения фокуса
+                    {
+                        if (TVK1DataChanged)
+                            comTVK1.DATA[1] = ++Cin;
+                        comTVK1.DATA[2] = 0x81;
+                        comTVK1.DATA[3] = 0x09;
+                        comTVK1.DATA[4] = 0x04;
+                        comTVK1.DATA[5] = 0x48;
+                        comTVK1.DATA[6] = 0xFF;
+                        TVK1DataChanged = false;
+                        //установить в false при приеме, при подтверждении приема данных
+                        //CAM_FocusPosInq = false;
+                        goto labelSendCommand;
+                    }
+
+                    if (camFocusFarVariableSend && !CAM_FocusPosInq)
                      {
                          if (TVK1DataChanged)
                              comTVK1.DATA[1] = ++Cin;
@@ -3288,9 +3549,12 @@ namespace MOSSimulator
                          comTVK1.DATA[6] = byteRes0;
                          //comTVK1.DATA[6] = 0x02;
                          comTVK1.DATA[7] = 0xFF;
-                         TVK1DataChanged = false;
-                     }
-                     if (camFocusNearVariableSend)
+                         //TVK1DataChanged = false;
+                         CAM_FocusPosInq = true;//послать запрос на получение значения фокуса и не менять TVK1DataChanged на false тут, оно изменится при запросе
+                         camFocusFarVariableSend = false;//сбросить признак, посылать пакет только 1 раз
+                         CinFocusPosInq = Cin-1;
+                    }
+                     if (camFocusNearVariableSend && !CAM_FocusPosInq)
                      {
                          if (TVK1DataChanged)
                              comTVK1.DATA[1] = ++Cin;
@@ -3321,8 +3585,11 @@ namespace MOSSimulator
                          comTVK1.DATA[6] = byteRes0;
                          //comTVK1.DATA[6] = 0x03;
                          comTVK1.DATA[7] = 0xFF;
-                         TVK1DataChanged = false;
-                     }
+                         //TVK1DataChanged = false;
+                         CAM_FocusPosInq = true;//послать запрос на получение значения фокуса и не менять TVK1DataChanged на false тут, оно изменится при запросе
+                         camFocusNearVariableSend = false;//сбросить признак, посылать пакет только 1 раз
+                         CinFocusPosInq = Cin-1;
+                    }
                      if (camFocusStopSend)
                      {
                          if (TVK1DataChanged)
@@ -3335,7 +3602,7 @@ namespace MOSSimulator
                          comTVK1.DATA[7] = 0xFF;
                          TVK1DataChanged = false;
                      }
-                     if (camFocusDirectSend)
+                     if (camFocusDirectSend && !CAM_FocusPosInq)
                      {
                          if (TVK1DataChanged)
                              comTVK1.DATA[1] = ++Cin;
@@ -3379,9 +3646,26 @@ namespace MOSSimulator
                          comTVK1.DATA[8] = byteRes1;
                          comTVK1.DATA[9] = byteRes0;
                          comTVK1.DATA[10] = 0xFF;
-                         TVK1DataChanged = false;
-                     }
-                     if (camAutoFocusSend)
+                         //TVK1DataChanged = false;
+                         CAM_FocusPosInq = true;//послать запрос на получение значения фокуса и не менять TVK1DataChanged на false тут, оно изменится при запросе
+                         camFocusDirectSend = false;//сбросить признак, посылать пакет только 1 раз
+                         CinFocusPosInq = Cin-1;
+                    }
+                    if (CAM_FocusModeInq)//послать запрос на получение значения режима фокуса
+                    {
+                        if (TVK1DataChanged)
+                            comTVK1.DATA[1] = ++Cin;
+                        comTVK1.DATA[2] = 0x81;
+                        comTVK1.DATA[3] = 0x09;
+                        comTVK1.DATA[4] = 0x04;
+                        comTVK1.DATA[5] = 0x38;
+                        comTVK1.DATA[6] = 0xFF;
+                        TVK1DataChanged = false;
+                        CAM_FocusModeInq = false;
+                        goto labelSendCommand;
+                    }
+
+                    if (camAutoFocusSend)
                      {
                          if (checkBoxTVK1CAM_FocusAutoVal)
                          {
@@ -3393,7 +3677,7 @@ namespace MOSSimulator
                              comTVK1.DATA[5] = 0x38;
                              comTVK1.DATA[6] = 0x02;
                              comTVK1.DATA[7] = 0xFF;
-                             TVK1DataChanged = false;
+                             //TVK1DataChanged = false;
                          }
                          else
                          {
@@ -3405,11 +3689,14 @@ namespace MOSSimulator
                              comTVK1.DATA[5] = 0x38;
                              comTVK1.DATA[6] = 0x03;
                              comTVK1.DATA[7] = 0xFF;
-                             TVK1DataChanged = false;
+                             //TVK1DataChanged = false;
                          }
-                     }
+                         //TVK1DataChanged = false;
+                         CAM_FocusModeInq = true;//послать запрос на получение значения режима фокуса и не менять TVK1DataChanged на false тут, оно изменится при запросе
+                         camAutoFocusSend = false;//сбросить признак, посылать пакет только 1 раз
+                    }
 
-                     buf_chksum_all[0] = comTVK1.START;
+labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                      buf_chksum_all[1] = comTVK1.ADDRESS;
                      buf_chksum_all[2] = comTVK1.LENGTH[0];
                      buf_chksum_all[3] = comTVK1.LENGTH[1];
@@ -3452,7 +3739,7 @@ namespace MOSSimulator
                         setTagUartReceived(false);
                      //tagUartReceivedInterm = false;
 
-                     currentDevice = Device.MU_GSP;
+                    currentDevice = Device.MU_GSP;
                  }
                 //ТВК1 END
 
@@ -3462,8 +3749,8 @@ namespace MOSSimulator
 
                 if (TVK2InfExchangeONOFF && getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 2)
                  {
-                    timeTVK2 = Environment.TickCount;
-                    comTVK2.DiscardDataBuf();
+                     timeTVK2 = Environment.TickCount;
+                     comTVK2.DiscardDataBuf();
                      byte[] byteArray;
                      BitArray bitArray = new BitArray(8);
                      byte[] buf_chksum_header = new byte[4];
@@ -3658,23 +3945,30 @@ namespace MOSSimulator
                      //Debug.WriteLine("ТВК2 -- MainWindow.InitSendCommand(), tagUartReceived: {0}.", getTagUartReceived());
 
                      currentDevice = Device.MU_GSP;
-                 }             
-                 //ТВК2 END
+                 }
+                //ТВК2 END
 
-                 //ТПВК
-                 if (TPVKInfExchangeONOFF && getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 3)
+                //ТПВК
+                if ((Environment.TickCount > timeTPVK + 100) && TPVKInfExchangeONOFF && !getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 3)
+                    setTagUartReceived(true);
+
+                if (TPVKInfExchangeONOFF && getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 3)
                  {
+                     timeTPVK = Environment.TickCount;
                      comTPVK.DiscardDataBuf();
                      byte[] byteArray;
                      BitArray bitArray = new BitArray(8);
                      byte[] buf_chksum_header = new byte[4];
-                     byte[] buf_chksum_all = new byte[22];//полная длина пакета 24 - 2 байта (длина чексуммы 2)
+                     byte[] buf_chksum_all = new byte[18];//полная длина пакета 19 - 2 байта (длина чексуммы 2)
+                     //18 т.к. добавление байта при нечетном количестве для подсчета контр. суммы
 
 
                      comTPVK.START = st_out.START;
                      comTPVK.ADDRESS = 14;
-                     comTPVK.LENGTH[0] = 7;//длина пакета 13 байт для камеры ТПВК
-                     comTPVK.LENGTH[1] = 0;
+                     comTPVK.LENGTH[0] = 6;//длина пакета 11 байт для камеры ТПВК + один байт добавляется для четности при расчете контр. суммы
+                     byte byte3 = 0;
+                     byte3 |= 1 << 7;
+                     comTPVK.LENGTH[1] = byte3;//b15 = 1, нечетное кол-во байт (11)
 
                      buf_chksum_header[0] = comTPVK.START;
                      buf_chksum_header[1] = comTPVK.ADDRESS;
@@ -3687,25 +3981,25 @@ namespace MOSSimulator
                      //////////
                      bitArray.SetAll(false);
 
-                     /*if (st_outTVK2.POWER)
+                     if (st_outTPVK.POWER)
                          bitArray.Set(0, true);
                      else
                          bitArray.Set(0, false);
-                     if (st_outTVK2.VIDEO_OUT_EN)
+                     if (st_outTPVK.VIDEO_OUT_EN)
                          bitArray.Set(1, true);
                      else
-                         bitArray.Set(1, false);*/
+                         bitArray.Set(1, false);
 
 
                      comTPVK.DATA[0] = ConvertToByte(bitArray);
 
-                     byteArray = BitConverter.GetBytes(st_outTVK2.CONTRAST_GAIN);
+                     /*byteArray = BitConverter.GetBytes(st_outTVK2.CONTRAST_GAIN);
                      comTPVK.DATA[1] = byteArray[0];
                      comTPVK.DATA[2] = byteArray[1];
 
                      byteArray = BitConverter.GetBytes(st_outTVK2.CONTRAST_OFFSET);
                      comTPVK.DATA[3] = byteArray[0];
-                     comTPVK.DATA[4] = byteArray[1];
+                     comTPVK.DATA[4] = byteArray[1];*/
                      ////
 
                      comTPVK.DATA[0] = 0;
@@ -3718,9 +4012,7 @@ namespace MOSSimulator
                      comTPVK.DATA[7] = 0;
                      comTPVK.DATA[8] = 0;
                      comTPVK.DATA[9] = 0;
-                     comTPVK.DATA[10] = 0;
-                     comTPVK.DATA[11] = 0;
-                     comTPVK.DATA[12] = 0;
+                     comTPVK.DATA[10] = 0;                     
 
                      buf_chksum_all[0] = comTPVK.START;
                      buf_chksum_all[1] = comTPVK.ADDRESS;
@@ -3743,11 +4035,10 @@ namespace MOSSimulator
                      buf_chksum_all[14] = comTPVK.DATA[8];
                      buf_chksum_all[15] = comTPVK.DATA[9];
                      buf_chksum_all[16] = comTPVK.DATA[10];
-                     buf_chksum_all[17] = comTPVK.DATA[11];
-                     buf_chksum_all[18] = comTPVK.DATA[12];
+                     buf_chksum_all[17] = 0;//добавить нулевой байт для расчета контрольной суммы, т.к. кол-во байт DATA[11]  нечетное = 11
 
-                     ushort chksm2 = (ushort)CheckSumRFC1071(buf_chksum_all, 19);
-                     comTPVK.CHECKSUM2 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_all, 19));
+                     ushort chksm2 = (ushort)CheckSumRFC1071(buf_chksum_all, 18);
+                     comTPVK.CHECKSUM2 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_all, 18));
 
                      Dispatcher.BeginInvoke(new Action(delegate
                      {
@@ -3763,9 +4054,13 @@ namespace MOSSimulator
                     currentDevice = Device.MU_GSP;
                 }
 
-                 //ЛД             
-                 if (LDInfExchangeONOFF && getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 4)
+                //ЛД
+                if ((Environment.TickCount > timeLD + 100) && LDInfExchangeONOFF && !getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 4)
+                    setTagUartReceived(true);
+
+                if (LDInfExchangeONOFF && getTagUartReceived() && arrayCycleDeviceOrder[cycleIndex] == 4)
                  {
+                     timeLD = Environment.TickCount;
                      comLD.DiscardDataBuf();
                      byte[] buf_chksum_header = new byte[4];
                      byte[] buf_chksum_all = new byte[10];//полная длина пакета 12 - 2 байта (длина чексуммы 2)
@@ -3974,7 +4269,7 @@ namespace MOSSimulator
             numTVK1ZoomTeleVariablePVal = (byte)numTVK1ZoomTeleVariableP.Value;
             numTVK1ZoomVal = (int)numTVK1Zoom.Value;
             numTVK1FocusFarNearVariablePVal = (byte)numTVK1FocusFarNearVariableP.Value;
-            numTVK1FocusVal = (byte)numTVK1Focus.Value;
+            numTVK1FocusVal = (int)numTVK1Focus.Value;
             checkBoxTVK1CAM_FocusAutoVal = (bool)checkBoxTVK1CAM_FocusAuto.IsChecked;
 
             double AZValueConvD;
@@ -4319,6 +4614,8 @@ namespace MOSSimulator
             st_outTPVK.LENGTH[1] = 0;
 
             //data
+            st_outTPVK.POWER = (bool)checkBoxTPVKONOFF.IsChecked;
+            st_outTPVK.VIDEO_OUT_EN = (bool)checkBoxTPVKVIDEO_OUT_EN.IsChecked;
             /*if ((bool)radioButtonExpoModeAuto.IsChecked)
                 st_outTPVK.MODE_POLARITY__AUTO_CALIBRATION = false;
             else
@@ -4341,9 +4638,9 @@ namespace MOSSimulator
 
     }
 
-    class LDTableTagetsDistances
+    class LDTableTargetsDistances
     {
-        public LDTableTagetsDistances(int Id, string val)
+        public LDTableTargetsDistances(int Id, string val)
         {
             this.Номер = Id;
             this.Расстояние = val;
