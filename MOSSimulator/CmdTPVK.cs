@@ -71,7 +71,7 @@ namespace MOSSimulator
             buf[4] = checkSumbyteArray[0];
             buf[5] = checkSumbyteArray[1];
 
-            for (int i = 0; i < TPVK_DATA_SIZE; i++)
+            for (int i = 0; i < TPVK_DATA_SIZE; i++)//+1 так как дополнение до четного
                 buf[i + 6] = DATA[i];
 
 //             for (int i = 0; i < GSP_PACKET_SIZE - 2; i++)

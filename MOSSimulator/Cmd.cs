@@ -93,7 +93,8 @@ namespace MOSSimulator
             buf[4] = checkSumbyteArray[0];
             buf[5] = checkSumbyteArray[1];
 
-            for (int i = 0; i < BitConverter.ToUInt16(LENGTH, 0); i++)
+            //int sz = BitConverter.ToUInt16(LENGTH, 0);
+            for (int i = 0; i < GSP_DATA_SIZE; i++)//GSP_DATA_SIZE
                 buf[i + 6] = DATA[i];
 
 //             for (int i = 0; i < GSP_PACKET_SIZE - 2; i++)

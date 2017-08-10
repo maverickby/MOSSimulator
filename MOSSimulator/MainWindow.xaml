@@ -95,8 +95,8 @@
                         <CheckBox x:Name="checkBoxMUGSPDoNotChangeReg" Content="Не менять режим" HorizontalAlignment="Left" Margin="21,37,0,0" VerticalAlignment="Top" Checked="checkBoxMUGSPDoNotChangeReg_Checked" Width="131" Click="checkBoxMUGSPDoNotChangeReg_Click"/>
                     </Grid>
                 </GroupBox>
-                <GroupBox x:Name="groupBoxGSPCondition" Header="Состояние ГСП" HorizontalAlignment="Left" Margin="10,301,0,14" Width="781" VerticalAlignment="Center" Height="217">
-                    <Grid HorizontalAlignment="Left" Width="696" Height="213" VerticalAlignment="Top">
+                <GroupBox x:Name="groupBoxGSPCondition" Header="Состояние ГСП" HorizontalAlignment="Left" Margin="10,320,0,33" Width="686" VerticalAlignment="Center" Height="217">
+                    <Grid HorizontalAlignment="Left" Width="676" Height="196" VerticalAlignment="Top" Margin="0,0,-2,-1">
                         <Label x:Name="label_Copy2" Content="Режим работы привода азимута" HorizontalAlignment="Left" Margin="17,3,0,0" VerticalAlignment="Top" Width="189"/>
                         <Label x:Name="label_Copy3" Content="Режим работы привода тангажа" HorizontalAlignment="Left" Margin="17,34,0,0" VerticalAlignment="Top" Width="189"/>
                         <TextBox x:Name="tbModeAZ" HorizontalAlignment="Left" Height="23" Margin="252,7,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="395"/>
@@ -109,9 +109,9 @@
                 <CheckBox x:Name="checkBoxmMUGSPInfExchangeONOFF" Content="Вкл/выкл информац. обмена с модулем" HorizontalAlignment="Left" Margin="30,10,0,0" VerticalAlignment="Top" Checked="checkBoxmMUGSPInfExchangeONOFF_Checked" Unchecked="checkBoxmMUGSPInfExchangeONOFF_Unchecked"/>
             </Grid>
         </GroupBox>
-        <Label x:Name="labelPort" Content="Порт" HorizontalAlignment="Left" Margin="21,4,0,0" Grid.Row="1" VerticalAlignment="Top" Width="38"/>
-        <ComboBox x:Name="cbComPorts" HorizontalAlignment="Left" Margin="85,8,0,0" Grid.Row="1" VerticalAlignment="Top" Width="69"/>
-        <Button x:Name="buttonStart" Content="Старт обмена" HorizontalAlignment="Left" Margin="173,10,0,0" Grid.Row="1" VerticalAlignment="Top" Width="86" Click="buttonStart_Click"/>
+        <Label x:Name="labelPort" Content="Порт" HorizontalAlignment="Left" Margin="45,7,0,0" Grid.Row="1" VerticalAlignment="Top" Width="38"/>
+        <ComboBox x:Name="cbComPorts" HorizontalAlignment="Left" Margin="85,10,0,0" Grid.Row="1" VerticalAlignment="Top" Width="69"/>
+        <Button x:Name="buttonStart" Content="Старт обмена" HorizontalAlignment="Left" Margin="173,11,0,0" Grid.Row="1" VerticalAlignment="Top" Width="86" Click="buttonStart_Click"/>
         <CheckBox x:Name="chbCycleMode" Content="Циклическая отправка" HorizontalAlignment="Left" Margin="277,13,0,0" Grid.Row="1" VerticalAlignment="Top" IsChecked="True" Width="152"/>
         <StatusBar HorizontalAlignment="Left" Height="35" Margin="0,965,0,-16" Grid.Row="1" VerticalAlignment="Top" Width="1912">
             <Label x:Name="lblStatusUART" Content="Статус обмена: " Width="178"/>
@@ -122,7 +122,7 @@
             <Label x:Name="lblStartErrors" Content="Ошибки старт. байта: " Width="182"/>
             <Label x:Name="lblOrderErrors" Content="Ошибки циклограммы: " Width="182"/>
         </StatusBar>
-        <Button x:Name="buttonSendOnce" Content="Однократная посылка" HorizontalAlignment="Left" Margin="455,10,0,0" Grid.Row="1" VerticalAlignment="Top" Width="131" Click="buttonSendOnce_Click" RenderTransformOrigin="3.488,0.6"/>
+        <Button x:Name="buttonSendOnce" Content="Однократная посылка" HorizontalAlignment="Left" Margin="434,10,0,0" Grid.Row="1" VerticalAlignment="Top" Width="131" Click="buttonSendOnce_Click" RenderTransformOrigin="3.488,0.6"/>
         <GroupBox x:Name="groupBoxTVK1" Header="ТВК 1" HorizontalAlignment="Left" Margin="994,628,0,0" Grid.Row="1" VerticalAlignment="Top" Height="332" Width="663">
             <Grid HorizontalAlignment="Left" Margin="10,10,-2,1" Width="643">
                 <CheckBox x:Name="checkBoxTVK1ONOFF" Content="Вкл/выкл камеры" HorizontalAlignment="Left" Margin="10,32,0,0" VerticalAlignment="Top" RenderTransformOrigin="3.972,1.267" Checked="checkBoxTVK1ONOFF_Checked" Unchecked="checkBoxTVK1ONOFF_Unchecked"/>
@@ -191,10 +191,10 @@
                     <RadioButton x:Name="radioButtonHDRMode2" Content="HDR 2" HorizontalAlignment="Left" Margin="0,36,0,0" VerticalAlignment="Top" Checked="radioButtonHDRMode2_Checked"/>
                 </Grid>
                 <CheckBox x:Name="checkBoxTVK2VIDEO_OUT_EN" Content="Вкл/выкл видеопотока" HorizontalAlignment="Left" Margin="12,59,0,0" VerticalAlignment="Top" Checked="checkBoxTVK2VIDEO_OUT_EN_Checked" Width="149" Unchecked="checkBoxTVK2VIDEO_OUT_EN_Unchecked"/>
-                <Label x:Name="labelTVK2READY_IN" Content="Состояние камеры" HorizontalAlignment="Left" Margin="275,4,0,0" VerticalAlignment="Top" Width="118"/>
-                <Label x:Name="labelTVK2VIDEO_OUT_STATE_IN" Content="Сост. передатч. видеоинформации " HorizontalAlignment="Left" Margin="185,29,0,0" VerticalAlignment="Top" Width="208"/>
-                <TextBox x:Name="textBoxTVK2READY_IN" HorizontalAlignment="Left" Height="23" Margin="393,6,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="147"/>
-                <TextBox x:Name="textBoxTVK2VIDEO_OUT_STATE_IN" HorizontalAlignment="Left" Height="23" Margin="393,33,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="147"/>
+                <Label x:Name="labelTVK2READY_IN" Content="Состояние камеры" HorizontalAlignment="Left" Margin="158,26,0,0" VerticalAlignment="Top" Width="118"/>
+                <Label x:Name="labelTVK2VIDEO_OUT_STATE_IN" Content="Сост. передатч. видеоинформации " HorizontalAlignment="Left" Margin="160,55,0,0" VerticalAlignment="Top" Width="208"/>
+                <TextBox x:Name="textBoxTVK2READY_IN" HorizontalAlignment="Left" Height="23" Margin="281,29,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="259"/>
+                <TextBox x:Name="textBoxTVK2VIDEO_OUT_STATE_IN" HorizontalAlignment="Left" Height="23" Margin="373,58,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="167"/>
             </Grid>
         </GroupBox>
         <GroupBox x:Name="groupBoxTPVK" Header="ТПВК" HorizontalAlignment="Left" Margin="10,622,0,0" Grid.Row="1" VerticalAlignment="Top" Height="338" Width="878">
@@ -258,35 +258,40 @@
                     <ColumnDefinition Width="24*"/>
                 </Grid.ColumnDefinitions>
                 <CheckBox x:Name="checkBoxLDONOFF" Content="Вкл/выкл" HorizontalAlignment="Left" Margin="10,26,0,0" VerticalAlignment="Top" Checked="checkBoxLDONOFF_Checked" Unchecked="checkBoxLDONOFF_Unchecked"/>
-                <Slider x:Name="sliderLDBrightnessLIghtVyvIzl" HorizontalAlignment="Left" Margin="249,109,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="114" ValueChanged="sliderLDBrightnessLIghtVyvIzl_ValueChanged" TouchLeave="sliderLDBrightnessLIghtVyvIzl_TouchLeave" SmallChange="1" AutoToolTipPlacement="TopLeft" Grid.ColumnSpan="2"/>
-                <xctk:DoubleUpDown x:Name="numLDBrightnessLIghtVyvIzl" Margin="12,127,0,0" Value="0" Increment="1" Text="" ValueChanged="numLDBrightnessLIghtVyvIzl_ValueChanged" Maximum="10" Minimum="0" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" DefaultValue="1" Grid.Column="1"/>
-                <Label x:Name="labelLDBrightnessLIghtVyvIzl" Content="Яркость подсветки выверки излучателя:" HorizontalAlignment="Left" Margin="14,103,0,0" VerticalAlignment="Top" Width="234"/>
-                <Button x:Name="buttonLDGetState" Content="Опрос состояния" HorizontalAlignment="Left" Margin="17,239,0,0" VerticalAlignment="Top" Width="108" Click="buttonLDGetState_Click" Grid.Column="1"/>
-                <Button x:Name="buttonLDSettingsExtendState" Content="Настройки расш. состояния" HorizontalAlignment="Left" Margin="250,264,0,0" VerticalAlignment="Top" Width="158" Click="buttonLDSettingsExtendState_Click" Grid.ColumnSpan="2"/>
-                <Label x:Name="labelLDBlokirovki" Content="Блокировки:" HorizontalAlignment="Left" Margin="17,200,0,0" VerticalAlignment="Top" Width="117"/>
-                <Label x:Name="labelLDRegimVARU" Content="Режим ВАРУ:" HorizontalAlignment="Left" Margin="8,49,0,0" VerticalAlignment="Top" Width="82"/>
-                <RadioButton x:Name="radioButtonLDRegimVARUOnStart" Content="по старту" HorizontalAlignment="Left" Margin="87,53,0,0" VerticalAlignment="Top" Checked="radioButtonLDRegimVARUOnStart_Checked" IsChecked="True"/>
-                <RadioButton x:Name="radioButtonLDRegimVARUBeforeStart" Content="до старта" HorizontalAlignment="Left" Margin="87,69,0,0" VerticalAlignment="Top" Checked="radioButtonLDRegimVARUBeforeStart_Checked"/>
-                <Label x:Name="labelLDCommands" Content="Команды" HorizontalAlignment="Left" Margin="162,48,0,0" VerticalAlignment="Top" Width="61"/>
-                <ComboBox x:Name="comboBoxLDCommands" HorizontalAlignment="Left" Margin="223,50,0,0" VerticalAlignment="Top" Width="193" DropDownClosed="comboBoxLDCommands_DropDownClosed" SelectedIndex="0" IsSynchronizedWithCurrentItem="False" Grid.ColumnSpan="2">
-                    <ComboBoxItem Content="Нет команды"/>
-                    <ComboBoxItem Content="Измерить дальность с фильтром"/>
-                    <ComboBoxItem Content="Измерить дальность без фильтра"/>
-                    <ComboBoxItem Content="Технол. цикл с включ. блок. излучения"/>
-                    <ComboBoxItem Content="Технол. цикл с  включ. блок. ФПУ"/>
-                </ComboBox>
-                <CheckBox x:Name="checkBoxLDBlokirovkaIzluch" Content="Блокировка ЛД" HorizontalAlignment="Left" Margin="124,208,0,0" VerticalAlignment="Top" Checked="checkBoxLDBlokirovkaIzluch_Checked" Unchecked="checkBoxLDBlokirovkaIzluch_Unchecked"/>
-                <CheckBox x:Name="checkBoxLDBlokirovkaFPU" Content="Блокировка ФПУ" HorizontalAlignment="Left" Margin="124,226,0,0" VerticalAlignment="Top" Checked="checkBoxLDBlokirovkaFPU_Checked" Unchecked="checkBoxLDBlokirovkaFPU_Unchecked"/>
-                <Slider x:Name="sliderLDBrightnessLIghtFPU" HorizontalAlignment="Left" Margin="250,151,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="114" ValueChanged="sliderLDBrightnessLIghtFPU_ValueChanged" TouchLeave="sliderLDBrightnessLIghtFPU_TouchLeave" SmallChange="1" AutoToolTipPlacement="TopLeft" Grid.ColumnSpan="2"/>
-                <xctk:DoubleUpDown x:Name="numLDBrightnessLIghtFPU" Margin="13,175,0,0" Value="0" Increment="1" Text="" ValueChanged="numLDBrightnessLIghtFPU_ValueChanged" Maximum="10" Minimum="0" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" DefaultValue="1" Grid.Column="1"/>
-                <Label x:Name="labelLDBrightnessLIghtFPU" Content="Яркость подсветки выверки ФПУ:" HorizontalAlignment="Left" Margin="15,146,0,0" VerticalAlignment="Top" Width="234"/>
+                <Slider x:Name="sliderLDBrightnessLIghtVyvIzl" HorizontalAlignment="Left" Margin="249,183,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="114" ValueChanged="sliderLDBrightnessLIghtVyvIzl_ValueChanged" TouchLeave="sliderLDBrightnessLIghtVyvIzl_TouchLeave" SmallChange="1" AutoToolTipPlacement="TopLeft" Grid.ColumnSpan="2"/>
+                <xctk:DoubleUpDown x:Name="numLDBrightnessLIghtVyvIzl" Margin="12,201,0,0" Value="0" Increment="1" Text="" ValueChanged="numLDBrightnessLIghtVyvIzl_ValueChanged" Maximum="10" Minimum="0" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" DefaultValue="1" Grid.Column="1"/>
+                <Label x:Name="labelLDBrightnessLIghtVyvIzl" Content="Яркость подсветки выверки излучателя:" HorizontalAlignment="Left" Margin="14,177,0,0" VerticalAlignment="Top" Width="234"/>
+                <Button x:Name="buttonLDGetState" Content="Опрос состояния" HorizontalAlignment="Left" Margin="17,313,0,0" VerticalAlignment="Top" Width="108" Click="buttonLDGetState_Click" Grid.Column="1"/>
+                <Button x:Name="buttonLDSettingsExtendState" Content="Настройки расш. состояния" HorizontalAlignment="Left" Margin="250,338,0,0" VerticalAlignment="Top" Width="158" Click="buttonLDSettingsExtendState_Click" Grid.ColumnSpan="2"/>
+                <Label x:Name="labelLDBlokirovki" Content="Блокировки:" HorizontalAlignment="Left" Margin="195,128,0,0" VerticalAlignment="Top" Width="86"/>
+                <Label x:Name="labelLDRegimVARU" Content="Режим ВАРУ:" HorizontalAlignment="Left" Margin="8,130,0,0" VerticalAlignment="Top" Width="82"/>
+                <RadioButton x:Name="radioButtonLDRegimVARUOnStart" Content="по старту" HorizontalAlignment="Left" Margin="87,134,0,0" VerticalAlignment="Top" Checked="radioButtonLDRegimVARUOnStart_Checked" IsChecked="True"/>
+                <RadioButton x:Name="radioButtonLDRegimVARUBeforeStart" Content="до старта" HorizontalAlignment="Left" Margin="87,150,0,0" VerticalAlignment="Top" Checked="radioButtonLDRegimVARUBeforeStart_Checked"/>
+                <CheckBox x:Name="checkBoxLDBlokirovkaIzluch" Content="Блокировка ЛД" HorizontalAlignment="Left" Margin="281,136,0,0" VerticalAlignment="Top" Checked="checkBoxLDBlokirovkaIzluch_Checked" Unchecked="checkBoxLDBlokirovkaIzluch_Unchecked" Grid.ColumnSpan="2"/>
+                <CheckBox x:Name="checkBoxLDBlokirovkaFPU" Content="Блокировка ФПУ" HorizontalAlignment="Left" Margin="281,154,0,0" VerticalAlignment="Top" Checked="checkBoxLDBlokirovkaFPU_Checked" Unchecked="checkBoxLDBlokirovkaFPU_Unchecked" Grid.ColumnSpan="2"/>
+                <Slider x:Name="sliderLDBrightnessLIghtFPU" HorizontalAlignment="Left" Margin="250,225,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="114" ValueChanged="sliderLDBrightnessLIghtFPU_ValueChanged" TouchLeave="sliderLDBrightnessLIghtFPU_TouchLeave" SmallChange="1" AutoToolTipPlacement="TopLeft" Grid.ColumnSpan="2"/>
+                <xctk:DoubleUpDown x:Name="numLDBrightnessLIghtFPU" Margin="13,242,0,0" Value="0" Increment="1" Text="" ValueChanged="numLDBrightnessLIghtFPU_ValueChanged" Maximum="10" Minimum="0" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" DefaultValue="1" Grid.Column="1"/>
+                <Label x:Name="labelLDBrightnessLIghtFPU" Content="Яркость подсветки выверки ФПУ:" HorizontalAlignment="Left" Margin="50,220,0,0" VerticalAlignment="Top" Width="195"/>
                 <CheckBox x:Name="checkBoxLDInfExchangeONOFF" Content="Вкл/выкл информац. обмена с модулем" HorizontalAlignment="Left" Margin="10,4,0,0" VerticalAlignment="Top" Unchecked="checkBoxLDONOFF_Unchecked" Checked="checkBoxmLDInfExchangeONOFF"/>
-                <Label x:Name="labelLDSOST_IN" Content="Состояние дальномера" HorizontalAlignment="Left" Margin="98,18,0,0" VerticalAlignment="Top" Width="149"/>
+                <Label x:Name="labelLDSOST_IN" Content="Состояние дальномера" HorizontalAlignment="Left" Margin="98,21,0,0" VerticalAlignment="Top" Width="149"/>
                 <TextBox x:Name="textBoxLDSOST_IN" HorizontalAlignment="Left" Height="23" Margin="243,22,0,0" VerticalAlignment="Top" Width="173" Grid.ColumnSpan="2" MaxLines="1" AcceptsReturn="False"/>
-                <Button x:Name="buttonLDApply" Content="Выполнить" HorizontalAlignment="Left" Margin="63,78,0,0" VerticalAlignment="Top" Width="71" Click="buttonLDApply_Click" Grid.Column="1"/>
-                <DataGrid x:Name="dataGridLDTargetsDistances" HorizontalAlignment="Left" Margin="17,314,0,0" VerticalAlignment="Top" Width="390" Height="226" Grid.ColumnSpan="2" Loaded="dataGridLDTargetsDistances_Loaded"/>
-                <Label x:Name="labelLDTableTargetsDist" Content="Массив дальностей до целей" HorizontalAlignment="Left" Margin="17,288,0,0" VerticalAlignment="Top" Width="234"/>
+                <DataGrid x:Name="dataGridLDTargetsDistances" HorizontalAlignment="Left" Margin="17,371,0,0" VerticalAlignment="Top" Width="390" Height="169" Grid.ColumnSpan="2" Loaded="dataGridLDTargetsDistances_Loaded"/>
+                <Label x:Name="labelLDTableTargetsDist" Content="Массив дальностей до целей" HorizontalAlignment="Left" Margin="17,347,0,0" VerticalAlignment="Top" Width="234"/>
+                <Slider x:Name="sliderLDStrob" HorizontalAlignment="Left" Margin="250,267,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="114" ValueChanged="sliderLDStrob_ValueChanged" TouchLeave="sliderLDStrob_TouchLeave" SmallChange="1" AutoToolTipPlacement="TopLeft" Grid.ColumnSpan="2"/>
+                <xctk:DoubleUpDown x:Name="numLDStrob" Margin="13,284,0,0" Value="0" Increment="1" Text="" ValueChanged="numLDStrob_ValueChanged" Maximum="10" Minimum="0" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" DefaultValue="1" Grid.Column="1"/>
+                <Label x:Name="labelLDStrob" Content="Дальность/строб:" HorizontalAlignment="Left" Margin="139,264,0,0" VerticalAlignment="Top" Width="109"/>
+                <GroupBox x:Name="groupBox" Header="Команда" HorizontalAlignment="Left" Margin="10,49,0,0" VerticalAlignment="Top" Width="384" Height="76" Grid.ColumnSpan="2">
+                    <Grid HorizontalAlignment="Left" Margin="0,-10,0,0" Width="280" Height="49" VerticalAlignment="Top">
+                        <ComboBox x:Name="comboBoxLDCommands" HorizontalAlignment="Left" Margin="99,8,-88,0" VerticalAlignment="Top" Width="269" DropDownClosed="comboBoxLDCommands_DropDownClosed" SelectedIndex="0" IsSynchronizedWithCurrentItem="False">
+                            <ComboBoxItem Content="Нет команды"/>
+                            <ComboBoxItem Content="Измерить дальность с фильтром"/>
+                            <ComboBoxItem Content="Измерить дальность без фильтра"/>
+                        </ComboBox>
+                        <Button x:Name="buttonLDApply" Content="Выполнить" HorizontalAlignment="Left" Margin="296,41,-87,-12" VerticalAlignment="Top" Width="71" Click="buttonLDApply_Click" RenderTransformOrigin="-1.211,-0.65"/>
+                    </Grid>
+                </GroupBox>
             </Grid>
         </GroupBox>
+        <CheckBox x:Name="chbLogFileSave" Content="Запись в лог-файл" HorizontalAlignment="Left" Margin="598,13,0,0" Grid.Row="1" VerticalAlignment="Top" Width="152" Checked="chbLogFileSave_Checked" Unchecked="chbLogFileSave_Unchecked"/>
     </Grid>
 </Window>

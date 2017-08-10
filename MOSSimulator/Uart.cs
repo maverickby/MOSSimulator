@@ -34,6 +34,7 @@ namespace MOSSimulator
         bool active;
 
         byte[] buf;
+        MainWindow mainWindow;
 
         /// <summary>
         /// Событие, срабатывает при окончании приема пакета, возникновении ошибки во время приема или таймаута
@@ -45,8 +46,9 @@ namespace MOSSimulator
         /// </summary>
         public event ByteBufDelegate showBufferWasSent;
 
-        public Uart()
+        public Uart(MainWindow mW)
         {
+            mainWindow = mW;
             uart = new SerialPort();
             uart.DataBits = 8;
             uart.Handshake = System.IO.Ports.Handshake.None;
@@ -279,22 +281,13 @@ namespace MOSSimulator
 
                         //timer.Stop();
                         uart.DiscardInBuffer();
+                        buf = command_in.GetBufToSend();
+                        if(mainWindow.LogFileSave)
+                            mainWindow.frmLog.WriteLine(buf, mainWindow, 1);
                         received(command_in);//Возбуждаем событие received и передаем ему данные, прием в MainWindow.uart_received() 
                     }
                 }
             }
-            /*catch (OverflowException)
-            {
-                Debug.WriteLine("DataReceived() OverflowException error, data_length * 2 > uart.BytesToRead()");
-                Debug.WriteLine("time: {0}.", DateTime.Now);
-            }
-            catch (IOException exc)
-            {
-                Debug.WriteLine("DataReceived() IOException error", exc.ToString());
-                Debug.WriteLine("time: {0}.", DateTime.Now);
-                //Console.WriteLine("Error reading data: {0}.",
-                //  exc.GetType().Name);
-            }*/
             catch (Exception exc)
             {
                 Debug.WriteLine("DataReceived() Exception error", exc.ToString());
@@ -456,7 +449,7 @@ namespace MOSSimulator
                 cbo.Text = "No port!";
         }
 
-        public void SendCommand(CmdPar command_out)
+        public void SendCommand(CmdPar command_out, MainWindow mWindow)
         {
             try
             {
@@ -468,6 +461,8 @@ namespace MOSSimulator
                     uart.DiscardOutBuffer();
 
                     buf = command_out.GetBufToSend();
+                    if(mainWindow.LogFileSave)
+                        mainWindow.frmLog.WriteLine(buf, mainWindow,0);
                     uart.Write(buf, 0, buf.Length);
                     showBufferWasSent(buf);
 

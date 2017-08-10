@@ -27,6 +27,7 @@ namespace MOSSimulator
     /// делегат для инициализации посылки команды
     /// <summary>
     public delegate void delInitSendCommand();
+    public delegate void delUpdateMUGSPErrorsWindow();
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
@@ -45,6 +46,7 @@ namespace MOSSimulator
         public Uart uart;
         int cntStartErrors, cntTimeOuts, cntChkSums, numOfPocket, cntSuccess, cntOrderErrors;
         private Multimedia.Timer tmrExchange;//таймер для ПЕРЕДАЧИ
+        private Multimedia.Timer tmrMUGSPErrors;//таймер для обновления ошибок МУ ГСП
         MyJoystick myJoystick;
         public MOSSimulator.MyJoystick MyJoystick
         {
@@ -159,6 +161,21 @@ namespace MOSSimulator
         object locker;
         object locker2;
         bool tagUartReceivedInterm;
+        ItemCollection collection;
+        List<ComboBoxItem> LDcbItemsList;
+        bool logFileSave;
+        public bool LogFileSave
+        {
+            get { return logFileSave; }
+            set { logFileSave = value; }
+        }
+
+        int CountMUGSPErrDatchUglAz;
+        int CountMUGSPErrDatchUglTang;
+        int CountMUGSPErrAzNeVDopuske;
+        int CountMUGSPErrTangNeVDopuske;
+        string str_err;
+
         public int JoystickZoneInsensibilityY
         {
             get { return joystickZoneInsensibilityY; }
@@ -193,7 +210,7 @@ namespace MOSSimulator
             comTVK2 = new CmdTVK2();
             comTPVK = new CmdTPVK();
             comLD = new CmdLD();
-            frmLog = new Log();
+            frmLog = new Log(this);
             //другое поведение WPF кантролов, не надо создавать тут экземпляры окон, в отличие от WinForms
             /*ldStatusWindow = new StatusWindow();
             tvk1StatusWindow = new StatusWindow();
@@ -206,6 +223,13 @@ namespace MOSSimulator
             tmrExchange.Resolution = 0;
             tmrExchange.SynchronizingObject = null;
             tmrExchange.Tick += new System.EventHandler(this.tmrExchange_Tick);
+
+            tmrMUGSPErrors = new Multimedia.Timer(this.components);
+            tmrMUGSPErrors.Mode = Multimedia.TimerMode.Periodic;
+            tmrMUGSPErrors.Period = 5000;
+            tmrMUGSPErrors.Resolution = 0;
+            tmrMUGSPErrors.SynchronizingObject = null;
+            tmrMUGSPErrors.Tick += new System.EventHandler(this.tmrMUGSPErrors_Tick);
 
             st_out = new StructureCommand();
             //st_in = new StructureCommand();            
@@ -291,11 +315,19 @@ namespace MOSSimulator
             for (int i = 0; i < 8; i++)
                 arrayActiveDevicesInCycle[i] = false;
             TVK1AutoFocus = "Режим фокуса: автофокус\n";
+            collection = comboBoxLDCommands.Items;
+            LogFileSave=false;
+
+            CountMUGSPErrDatchUglAz=0;
+            CountMUGSPErrDatchUglTang = 0;
+            CountMUGSPErrAzNeVDopuske = 0;
+            CountMUGSPErrTangNeVDopuske = 0;
+            str_err = "";
         }
         private void Log_Click(object sender, RoutedEventArgs e)
         {
             if(frmLog.IsDisposed)
-                frmLog = new Log();
+                frmLog = new Log(this);
             frmLog.Text = "Лог";
             frmLog.Show();
             frmLog.Open();
@@ -479,7 +511,7 @@ namespace MOSSimulator
         Uart UartConnect()
         {
             if (uart == null)
-                uart = new Uart();
+                uart = new Uart(this);
 
             if (uart.isOpen() == false)//если порт закрыт, старт
             {
@@ -511,6 +543,7 @@ namespace MOSSimulator
                             // создаем новый поток
                             uartThread = new Thread(new ThreadStart(InitSendCommand));
                             uartThread.Start(); // запускаем поток
+                            tmrMUGSPErrors.Start();
                             //uartThread.Join();
 
                             //InitSendCommand();
@@ -542,8 +575,9 @@ namespace MOSSimulator
                 if((bool)chbCycleMode.IsChecked == true)
                 {
                     uart.DesetFalse();
-                    cntStartErrors = 0; cntTimeOuts = 0; cntChkSums = 0; numOfPocket = 0; cntSuccess = 0;
-                    cntOrderErrors = 0;
+                    tmrMUGSPErrors.Stop();
+                    //cntStartErrors = 0; cntTimeOuts = 0; cntChkSums = 0; numOfPocket = 0; cntSuccess = 0;
+                    //cntOrderErrors = 0;
 
                     //while (tmrExchange.IsRunning)
                     //    DoEvents(); //Application.DoEvents();
@@ -566,7 +600,8 @@ namespace MOSSimulator
                     buttonStart.Content = "Старт";
                     buttonStart.Background = Brushes.LightGray;
                     cbComPorts.IsEnabled = true;
-                    uart = null;                  
+                    uart = null;
+                    //frmLog.Close_();
                 }
                 else//порт открыт И однократная посылка
                 {
@@ -821,7 +856,7 @@ namespace MOSSimulator
                     byteArrErr[1] = com_in.DATA[9];
 
                     //tbErrors.Text = BitConverter.ToUInt16(byteArrErr, 0).ToString();   
-                    string str_err = "";
+                    str_err = "";
 
                     byte errByte = com_in.DATA[8];
                     if ((errByte & 1 << 0) != 0)
@@ -836,11 +871,13 @@ namespace MOSSimulator
 
                     if ((errByte & 1 << 2) != 0)
                     {
-                        str_err += "Ошибка датчика угла азимута\r\n";
+                        CountMUGSPErrDatchUglAz++;
+                        str_err += "Ошибка датчика угла азимута, пакетов:" + CountMUGSPErrDatchUglAz.ToString() + "\r\n";
                     }
                     if ((errByte & 1 << 3) != 0)
                     {
-                        str_err += "Ошибка датчика угла тангажа\r\n";
+                        CountMUGSPErrDatchUglTang++;
+                        str_err += "Ошибка датчика угла тангажа, пакетов:" + CountMUGSPErrDatchUglTang.ToString() + "\r\n";
                     }
                     if ((errByte & 1 << 4) != 0)
                     {
@@ -870,11 +907,13 @@ namespace MOSSimulator
                     }
                     if ((errByte & 1 << 2) != 0)
                     {
-                        str_err += "Ошибка по азимуту не в допуске\r\n";
+                        CountMUGSPErrAzNeVDopuske++;
+                        str_err += "Ошибка по азимуту не в допуске, пакетов:" + CountMUGSPErrAzNeVDopuske.ToString() + "\r\n";
                     }
                     if ((errByte & 1 << 3) != 0)
                     {
-                        str_err += "Ошибка по тангажу не в допуске\r\n";
+                        CountMUGSPErrTangNeVDopuske++;
+                        str_err += "Ошибка по тангажу не в допуске, пакетов:" + CountMUGSPErrTangNeVDopuske.ToString() + "\r\n";
                     }
                     if ((errByte & 1 << 4) != 0)
                     {
@@ -893,7 +932,7 @@ namespace MOSSimulator
                         str_err += "Превышение температуры привода тангажа\r\n";
                     }
 
-                    tbErrors.Text = str_err;
+                    //tbErrors.Text = str_err;
                 }));
 
                     ShowBuf(com_in.GetBufToSend(), false);
@@ -1066,14 +1105,14 @@ namespace MOSSimulator
                         textBoxTVK2READY_IN.Text = "";
                         textBoxTVK2VIDEO_OUT_STATE_IN.Text = "";
                         if (!bitArray.Get(0))
-                            textBoxTVK2READY_IN.Text += "камера выключена или не принимается видеоинформация\n";
+                            textBoxTVK2READY_IN.Text += "Камера выкл. или не приним. видеоинформация\n";
                         else
-                            textBoxTVK2READY_IN.Text += "камера включена и данные принимаются верно\n";
+                            textBoxTVK2READY_IN.Text += "Камера включена и данные принимаются верно\n";
                         //VIDEO_OUT_STATE
                         if (!bitArray.Get(1))
-                            textBoxTVK2VIDEO_OUT_STATE_IN.Text += "данные не передаются\n";
+                            textBoxTVK2VIDEO_OUT_STATE_IN.Text += "Данные не передаются\n";
                         else
-                            textBoxTVK2VIDEO_OUT_STATE_IN.Text += "данные передаются\n";
+                            textBoxTVK2VIDEO_OUT_STATE_IN.Text += "Данные передаются\n";
 
                         
                         if (!bitArray.Get(2))
@@ -1410,8 +1449,8 @@ namespace MOSSimulator
                         List<LDTableTargetsDistances> result = new List<LDTableTargetsDistances>(valNUM_TARGET);
                         for (int i = 0; i < valNUM_TARGET; i++)
                         {
-                            byteArr5[0] = com_in.DATA[6 + i+2];
-                            byteArr5[1] = com_in.DATA[7 + i+2];
+                            byteArr5[0] = com_in.DATA[6 + i*2+2];
+                            byteArr5[1] = com_in.DATA[7 + i*2+2];
                             arrDist[i] = BitConverter.ToInt16(byteArr5, 0);
                             result.Add(new LDTableTargetsDistances(i + 1, arrDist[i].ToString()));
 
@@ -1423,18 +1462,8 @@ namespace MOSSimulator
                         ldStatusWindow.fillData(strStatusLD);
                 }));
                     setTagUartReceived(true);
-                    //Debug.WriteLine("ЛД-- MainWindow.uart_received(), cycleIndex: {0}.", cycleIndex);
-                    //Debug.WriteLine("ЛД-- MainWindow.uart_received(), tagUartReceived: {0}.", getTagUartReceived());
                 }
                 //ЛД END
-
-                //if ((bool)chbCycleMode.IsChecked)
-                //        tmrExchange.Start();
-
-                //now SEND COMMAND immediately ! (not using tmrExchange)
-                //InitSendCommand();
-                //}));
-
                 //now SEND COMMAND immediately ! (not using tmrExchange)
                 //InitSendCommand();
         }
@@ -1795,21 +1824,60 @@ namespace MOSSimulator
 
         private void checkBoxLDBlokirovkaIzluch_Unchecked(object sender, RoutedEventArgs e)
         {
+            //comboBoxLDCommands.ItemsSource = collection;
+            comboBoxLDCommands.Items.Clear();
+
+            comboBoxLDCommands.Items.Add("Нет команды");
+            //comboBoxLDCommands.Items.Add("Измерить дальность с фильтром");
+            //comboBoxLDCommands.Items.Add("Измерить дальность без фильтра");
+            //comboBoxLDCommands.Items.Add("Технол. цикл с включ. блок. излучения");
+            if ((bool)checkBoxLDBlokirovkaFPU.IsChecked)
+                comboBoxLDCommands.Items.Add("Технол. цикл с  включ. блок. ФПУ");
+            comboBoxLDCommands.SelectedIndex = 0;
             ControlChanged(sender, e);
         }
 
         private void checkBoxLDBlokirovkaIzluch_Checked(object sender, RoutedEventArgs e)
         {
+            //ItemCollection collection = comboBoxLDCommands.Items;
+            //comboBoxLDCommands.Items.Remove((ComboBoxItem)comboBoxLDCommands.Items.GetItemAt(1));
+            //comboBoxLDCommands.Items.Remove((ComboBoxItem)comboBoxLDCommands.Items.GetItemAt(1));
+            //comboBoxLDCommands.Items.Remove((ComboBoxItem)comboBoxLDCommands.Items.GetItemAt(2));
+
+            comboBoxLDCommands.Items.Clear();
+            
+            comboBoxLDCommands.Items.Add("Нет команды");
+            if (!(bool)checkBoxLDBlokirovkaFPU.IsChecked)
+                comboBoxLDCommands.Items.Add("Технол. цикл с включ. блок. излучения");
+            comboBoxLDCommands.SelectedIndex = 0;
             ControlChanged(sender, e);
         }
 
         private void checkBoxLDBlokirovkaFPU_Checked(object sender, RoutedEventArgs e)
         {
+            /*comboBoxLDCommands.Items.Remove((ComboBoxItem)comboBoxLDCommands.Items.GetItemAt(1));
+            comboBoxLDCommands.Items.Remove((ComboBoxItem)comboBoxLDCommands.Items.GetItemAt(1));
+            comboBoxLDCommands.Items.Remove((ComboBoxItem)comboBoxLDCommands.Items.GetItemAt(1));*/
+            comboBoxLDCommands.Items.Clear();
+
+            comboBoxLDCommands.Items.Add("Нет команды");
+            if (!(bool)checkBoxLDBlokirovkaIzluch.IsChecked)
+                comboBoxLDCommands.Items.Add("Технол. цикл с  включ. блок. ФПУ");
+            comboBoxLDCommands.SelectedIndex = 0;
             ControlChanged(sender, e);
         }
 
         private void checkBoxLDBlokirovkaFPU_Unchecked(object sender, RoutedEventArgs e)
         {
+            comboBoxLDCommands.Items.Clear();
+
+            comboBoxLDCommands.Items.Add("Нет команды");
+            //comboBoxLDCommands.Items.Add("Измерить дальность с фильтром");
+            //comboBoxLDCommands.Items.Add("Измерить дальность без фильтра");
+            if ((bool)checkBoxLDBlokirovkaIzluch.IsChecked)
+                comboBoxLDCommands.Items.Add("Технол. цикл с включ. блок. излучения");
+            //comboBoxLDCommands.Items.Add("Технол. цикл с  включ. блок. ФПУ");
+            comboBoxLDCommands.SelectedIndex = 0;
             ControlChanged(sender, e);
         }
 
@@ -2289,7 +2357,8 @@ namespace MOSSimulator
                 uartThread.Join();
                 cycleIndex = 0;
                 setTagUartReceived(true);
-                uart.Close();
+                if(uart!=null)
+                    uart.Close();
 
                 buttonStart.Content = "Старт";
                 buttonStart.Background = Brushes.LightGray;
@@ -2307,6 +2376,7 @@ namespace MOSSimulator
                 tvk2StatusWindow.Close();
             if (tpvkStatusWindow != null)
                 tpvkStatusWindow.Close();
+            frmLog.Close_();
             DoEvents(); //Application.DoEvents();
         }
 
@@ -3095,6 +3165,14 @@ namespace MOSSimulator
                 Dispatcher.Invoke(new delInitSendCommand(InitSendCommand));
             }
         }
+        
+        private void tmrMUGSPErrors_Tick(object sender, EventArgs e)
+        {            
+            if (!Dispatcher.CheckAccess())
+            {                
+                Dispatcher.Invoke(new delUpdateMUGSPErrorsWindow(UpdateMUGSPErrorsWindow));
+            }
+        }
 
         private int getNextQueueIndex(int currIndex)
         {
@@ -3134,6 +3212,23 @@ namespace MOSSimulator
             ControlChanged(sender, e);
         }
 
+        private void sliderLDStrob_TouchLeave(object sender, TouchEventArgs e)
+        {
+            sliderLDStrob.Value = (int)numLDStrob.Value;
+            ControlChanged(sender, e);
+        }
+
+        private void sliderLDStrob_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            numLDStrob.Value = (int)sliderLDStrob.Value;
+        }
+
+        private void numLDStrob_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            sliderLDStrob.Value = (int)numLDStrob.Value;
+            ControlChanged(sender, e);
+        }
+
         private int getNextActiveDeviceInCycle(int currIndex)
         {
             int Index = -1;
@@ -3153,6 +3248,30 @@ namespace MOSSimulator
                     }
 
             return Index;
+        }
+
+        private void chbLogFileSave_Checked(object sender, RoutedEventArgs e)
+        {
+            LogFileSave = true;
+            frmLog.Open();
+            ControlChanged(sender, e);
+        }
+
+        private void chbLogFileSave_Unchecked(object sender, RoutedEventArgs e)
+        {
+            LogFileSave = false;
+            frmLog.Close_();
+            ControlChanged(sender, e);
+        }
+
+        private void UpdateMUGSPErrorsWindow()
+        {
+            if(MUGSPInfExchangeONOFF)
+                Dispatcher.BeginInvoke(new Action(delegate
+                {
+                    tbErrors.Text = str_err;                    
+                    str_err = "";
+                }));
         }
 
         /// <summary>
@@ -3251,27 +3370,26 @@ namespace MOSSimulator
                          lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
                      }));
 
-                    uart.SendCommand(com);
+                     uart.SendCommand(com, this);
+
                      numOfPocket++;
-                     //if (!isThereAnotherActiveDevice(cycleIndex))//выкинул проверку, вроде работает !
-                        setTagUartReceived(false);
-                     //tagUartReceivedInterm = false;
+                     setTagUartReceived(false);
 
-                 //если была однократная посылка - остановить таймер передачи и НЕ закрывать uart  !
-                 /*if (!(bool)chbCycleMode.IsChecked)
-                 {
-                     //uart.DesetFalse();  //--- оставить active в true
+                     //если была однократная посылка - остановить таймер передачи и НЕ закрывать uart  !
+                     /*if (!(bool)chbCycleMode.IsChecked)
+                     {
+                         //uart.DesetFalse();  //--- оставить active в true
 
-                     tmrExchange.Stop();
-                     //uart.Close();
+                         tmrExchange.Stop();
+                         //uart.Close();
 
-                     buttonStart.Content = "Старт";
-                     buttonStart.Background = Brushes.LightGray;
-                     cbComPorts.IsEnabled = true;
-                     //uart = null;
-                 }*/
+                         buttonStart.Content = "Старт";
+                         buttonStart.Background = Brushes.LightGray;
+                         cbComPorts.IsEnabled = true;
+                         //uart = null;
+                     }*/
 
-                 currentDevice = Device.TVK1;
+                    currentDevice = Device.TVK1;
                  }
                 //МУ ГСП END
 
@@ -3733,13 +3851,11 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                          lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
                      }));
 
-                     uart.SendCommand(comTVK1);
-                     numOfPocket++;
-                     //if (!isThereAnotherActiveDevice(cycleIndex))//выкинул проверку, вроде работает !
-                        setTagUartReceived(false);
-                     //tagUartReceivedInterm = false;
+                     uart.SendCommand(comTVK1, this);
 
-                    currentDevice = Device.MU_GSP;
+                     numOfPocket++;
+                     setTagUartReceived(false);
+                     currentDevice = Device.MU_GSP;
                  }
                 //ТВК1 END
 
@@ -3936,14 +4052,10 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                          lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
                      }));
 
-                     uart.SendCommand(comTVK2);
-                     numOfPocket++;
-                     //if (!isThereAnotherActiveDevice(cycleIndex))//выкинул проверку, вроде работает !
-                        setTagUartReceived(false);
-                     //tagUartReceivedInterm = false;
-                     //Debug.WriteLine("ТВК2 -- MainWindow.InitSendCommand(), cycleIndex: {0}.", cycleIndex);
-                     //Debug.WriteLine("ТВК2 -- MainWindow.InitSendCommand(), tagUartReceived: {0}.", getTagUartReceived());
+                     uart.SendCommand(comTVK2, this);
 
+                     numOfPocket++;
+                     setTagUartReceived(false);
                      currentDevice = Device.MU_GSP;
                  }
                 //ТВК2 END
@@ -3959,7 +4071,7 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                      byte[] byteArray;
                      BitArray bitArray = new BitArray(8);
                      byte[] buf_chksum_header = new byte[4];
-                     byte[] buf_chksum_all = new byte[18];//полная длина пакета 19 - 2 байта (длина чексуммы 2)
+                     byte[] buf_chksum_all = new byte[18];//полная длина пакета 20 - 2 байта (длина чексуммы 2)
                      //18 т.к. добавление байта при нечетном количестве для подсчета контр. суммы
 
 
@@ -4039,19 +4151,18 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
 
                      ushort chksm2 = (ushort)CheckSumRFC1071(buf_chksum_all, 18);
                      comTPVK.CHECKSUM2 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_all, 18));
+                     if (comTPVK.CHECKSUM2 == 0x0000)
+                        comTPVK.CHECKSUM2 = 0xFFFF;
 
                      Dispatcher.BeginInvoke(new Action(delegate
                      {
                          lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
                      }));
 
-                     uart.SendCommand(comTPVK);
+                     uart.SendCommand(comTPVK, this);
                      numOfPocket++;
-                     //if (!isThereAnotherActiveDevice(cycleIndex))//выкинул проверку, вроде работает !
-                        setTagUartReceived(false);
-                     //tagUartReceivedInterm = false;
-
-                    currentDevice = Device.MU_GSP;
+                     setTagUartReceived(false);
+                     currentDevice = Device.MU_GSP;
                 }
 
                 //ЛД
@@ -4165,15 +4276,9 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                          lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
                      }));
 
-                     uart.SendCommand(comLD);
+                     uart.SendCommand(comLD, this);
                      numOfPocket++;
-
-                     //if(!isThereAnotherActiveDevice(cycleIndex))//выкинул проверку, вроде работает !
-                        setTagUartReceived(false); //tagUartReceived устанавливаем в false при ПЕРЕДАЧЕ пакета и ЖДЕМ приема пакета !
-                     //tagUartReceivedInterm = false;
-                     //Debug.WriteLine("ЛД -- MainWindow.InitSendCommand(), cycleIndex: {0}.", cycleIndex);
-                     //Debug.WriteLine("ЛД -- MainWindow.InitSendCommand(), tagUartReceived: {0}.", getTagUartReceived());
-
+                     setTagUartReceived(false); //tagUartReceived устанавливаем в false при ПЕРЕДАЧЕ пакета и ЖДЕМ приема пакета !
                      currentDevice = Device.MU_GSP;
                  }//ЛД END             
 
@@ -4191,7 +4296,6 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                  //далее цикл повторяется.  
 
                  tagUartReceivedInterm = getTagUartReceived();
-                 //Debug.WriteLine("---> MainWindow.InitSendCommand(), tagUartReceived: {0}.", tagUartReceivedInterm); 
                         
                  if (getTagUartReceived() == true)
                          cycleIndex++;
@@ -4484,8 +4588,9 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
             st_outLD.LENGTH[1] = 0;
 
             //data
-            st_outLD.POWER = (bool)checkBoxLDONOFF.IsChecked;            
-            st_outLD.COMMAND = (byte)LDCommand[comboBoxLDCommands.SelectedIndex];
+            st_outLD.POWER = (bool)checkBoxLDONOFF.IsChecked;
+            int indexLDCommand = getindexLDCommand(comboBoxLDCommands.SelectionBoxItem.ToString());
+            st_outLD.COMMAND = (byte)LDCommand[indexLDCommand];
             st_outLD.BLOCK_LD = (bool)checkBoxLDBlokirovkaIzluch.IsChecked;
             st_outLD.BLOCK_FPU = (bool)checkBoxLDBlokirovkaFPU.IsChecked; ;
             st_outLD.REGIM_VARU = Convert.ToByte(!(bool)radioButtonLDRegimVARUOnStart.IsChecked);
@@ -4634,6 +4739,25 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                 CheckSum = ((CheckSum & 0xFFFF) + (CheckSum >> 16));
             CheckSum = ~CheckSum;
             return (CheckSum & 0x0000FFFF);
+        }
+
+        public int getindexLDCommand(string Item)
+        {
+            switch (Item)
+            {
+                case "Нет команды":
+                    return 0;
+                case "Измерить дальность с фильтром":
+                    return 1;
+                case "Измерить дальность без фильтра":
+                    return 2;
+                case "Технол. цикл с включ. блок. излучения":
+                    return 3;
+                case "Технол. цикл с  включ. блок. ФПУ":
+                    return 4;
+                default:
+                    return 0;                    
+            }
         }
 
     }
