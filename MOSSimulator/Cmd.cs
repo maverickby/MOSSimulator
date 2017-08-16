@@ -32,6 +32,7 @@ namespace MOSSimulator
         private byte[] buf;
         const int GSP_DATA_SIZE = 10;//размер исх. пакета 10, входящего - 12
         const int GSP_PACKET_SIZE = 18;
+        const int MAX_DATA_SIZE = 72;//максимальный размер пакета данных 72 байта (для ЛД 72, МУ ГСП 12...)
 
         public Cmd()
         {
@@ -48,7 +49,7 @@ namespace MOSSimulator
 
             result = CmdResult.BAD_START_BYTE;
 
-            buf = new byte[GSP_PACKET_SIZE];
+            buf = new byte[MAX_DATA_SIZE];
         }
         public Cmd(int data_size)
         {
@@ -65,7 +66,7 @@ namespace MOSSimulator
 
             result = CmdResult.BAD_START_BYTE;
 
-            buf = new byte[GSP_PACKET_SIZE];
+            buf = new byte[MAX_DATA_SIZE];
         }
 
         /// <summary>
@@ -94,7 +95,7 @@ namespace MOSSimulator
             buf[5] = checkSumbyteArray[1];
 
             //int sz = BitConverter.ToUInt16(LENGTH, 0);
-            for (int i = 0; i < GSP_DATA_SIZE; i++)//GSP_DATA_SIZE
+            for (int i = 0; i < buf[2]*2/*GSP_DATA_SIZE*/; i++)//GSP_DATA_SIZE
                 buf[i + 6] = DATA[i];
 
 //             for (int i = 0; i < GSP_PACKET_SIZE - 2; i++)

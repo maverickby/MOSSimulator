@@ -698,7 +698,7 @@ namespace MOSSimulator
 
                 Dispatcher.BeginInvoke(new Action(delegate
                 {
-                    tbErrors.Text = "";
+                    //tbErrors.Text = "";
                     switch ((int)com_in.DATA[0])
                     {
                         case 0x00:
@@ -1441,7 +1441,7 @@ namespace MOSSimulator
                     short valNUM_TARGET = BitConverter.ToInt16(byteArr4, 0);
                     strStatusLD += "NUM_TARGET: " + valNUM_TARGET.ToString() + "\n";
 
-                    //заполнить массив дальностей до целей ЛД
+                    //заполнить массив дальностей до целей ЛД                    
                     if (com_in.DATA.Length > 8 && valNUM_TARGET > 0 && valNUM_TARGET < 33)
                     {
                         byte[] byteArr5 = new byte[2];
@@ -1462,7 +1462,8 @@ namespace MOSSimulator
                         ldStatusWindow.fillData(strStatusLD);
                 }));
                     setTagUartReceived(true);
-                }
+                Thread.Sleep(1);//для недопущения подвисания в dataGrid
+            }
                 //ЛД END
                 //now SEND COMMAND immediately ! (not using tmrExchange)
                 //InitSendCommand();
@@ -3271,6 +3272,10 @@ namespace MOSSimulator
                 {
                     tbErrors.Text = str_err;                    
                     str_err = "";
+                    CountMUGSPErrDatchUglAz = 0;
+                    CountMUGSPErrDatchUglTang = 0;
+                    CountMUGSPErrAzNeVDopuske = 0;
+                    CountMUGSPErrTangNeVDopuske = 0;
                 }));
         }
 
@@ -4112,9 +4117,7 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                      byteArray = BitConverter.GetBytes(st_outTVK2.CONTRAST_OFFSET);
                      comTPVK.DATA[3] = byteArray[0];
                      comTPVK.DATA[4] = byteArray[1];*/
-                     ////
-
-                     comTPVK.DATA[0] = 0;
+                     ////                     
                      comTPVK.DATA[1] = 0;
                      comTPVK.DATA[2] = 0;
                      comTPVK.DATA[3] = 0;
@@ -4151,8 +4154,6 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
 
                      ushort chksm2 = (ushort)CheckSumRFC1071(buf_chksum_all, 18);
                      comTPVK.CHECKSUM2 = (ushort)IPAddress.HostToNetworkOrder((short)CheckSumRFC1071(buf_chksum_all, 18));
-                     if (comTPVK.CHECKSUM2 == 0x0000)
-                        comTPVK.CHECKSUM2 = 0xFFFF;
 
                      Dispatcher.BeginInvoke(new Action(delegate
                      {
@@ -4276,7 +4277,7 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                          lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
                      }));
 
-                     uart.SendCommand(comLD, this);
+                    uart.SendCommand(comLD, this);
                      numOfPocket++;
                      setTagUartReceived(false); //tagUartReceived устанавливаем в false при ПЕРЕДАЧЕ пакета и ЖДЕМ приема пакета !
                      currentDevice = Device.MU_GSP;

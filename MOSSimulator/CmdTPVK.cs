@@ -26,7 +26,8 @@ namespace MOSSimulator
 
         private byte[] buf;
         const int TPVK_DATA_SIZE = 11;
-        const int TPVK_PACKET_SIZE = 19; //data size (11) + 8 = 19
+        const int TPVK_PACKET_SIZE = 20; //data size (11) + 8 +1 = 20
+        //+1 т.к. добавление одного байта до четного кол-ва
 
         public CmdTPVK()
         {
@@ -71,11 +72,12 @@ namespace MOSSimulator
             buf[4] = checkSumbyteArray[0];
             buf[5] = checkSumbyteArray[1];
 
-            for (int i = 0; i < TPVK_DATA_SIZE; i++)//+1 так как дополнение до четного
+            for (int i = 0; i < TPVK_DATA_SIZE; i++)
                 buf[i + 6] = DATA[i];
+            buf[TPVK_PACKET_SIZE-3] = 0x00;//дополнение нуулевым байтом
 
-//             for (int i = 0; i < GSP_PACKET_SIZE - 2; i++)
-//                 checksum2 ^= buf[i];
+            //             for (int i = 0; i < GSP_PACKET_SIZE - 2; i++)
+            //                 checksum2 ^= buf[i];
 
             byte[] checkSumbyteArray2 = BitConverter.GetBytes(CHECKSUM2);
             buf[TPVK_PACKET_SIZE - 2] = checkSumbyteArray2[0];

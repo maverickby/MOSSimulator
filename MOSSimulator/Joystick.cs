@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Multimedia;
 using SharpDX.DirectInput;
+using System.Diagnostics;
 
 namespace MOSSimulator
 {
@@ -95,11 +96,20 @@ namespace MOSSimulator
 
                     //msgAppeared(String.Format("Повтор соединения через {0} мс.",periodInit));
                 }
-
-                if (!InitJoystick())
-                    tmr.Period = periodInit;
-                else
-                    tmr.Period = periodWorking;
+                try
+                {
+                    if (!InitJoystick())
+                        tmr.Period = periodInit;
+                    else
+                        tmr.Period = periodWorking;
+                }
+                catch (SharpDX.SharpDXException exc)
+                {
+                    if (ex is SharpDX.SharpDXException)
+                        msgAppeared(String.Format("{0} Повтор через {1} мс", ((SharpDX.SharpDXException)ex).Descriptor.Description, periodInit));
+                    else
+                        msgAppeared(ex.Message);
+                }
 
             }
         }
