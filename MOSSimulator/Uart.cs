@@ -170,6 +170,9 @@ namespace MOSSimulator
             ushort data_length;
             byte[] LENGTH = new byte[2];
 
+            if (uart == null)
+                return;
+
             try
             {
                 if (state_rx == STATE_RX.START)
@@ -479,7 +482,8 @@ namespace MOSSimulator
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                //MessageBox.Show(ex.Message);
+                Debug.WriteLine("SendCommand() Exception error", ex.ToString());
             }
         }
 

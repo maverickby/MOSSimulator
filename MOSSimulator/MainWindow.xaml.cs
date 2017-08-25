@@ -111,6 +111,8 @@ namespace MOSSimulator
         const int TPVK_PACKET_SIZE_OUT = 19;
 
         double AZSpeed, ELSpeed;//хранение значений скоростей наведения при управлении джойстиком, значение в диапазоне 0..1
+        int AZValue;//значение азимута МУ ГСП
+        int ELValue;//значение тангажа МУ ГСП
         int joystickZoneInsensibilityX, joystickZoneInsensibilityY;
         bool camZoomTeleVariableSend;
         bool camZoomWideVariableSend;
@@ -148,6 +150,8 @@ namespace MOSSimulator
 
         bool[] JoystickKeyboardsStates;
 
+        bool MUGSPSpeedNavFixed;//признак блокировки наведения по скорости при управлении джойстиком
+
         bool[] activeDevicesArr;
         bool[] arrayActiveDevicesInCycle;
 
@@ -175,6 +179,18 @@ namespace MOSSimulator
         int CountMUGSPErrAzNeVDopuske;
         int CountMUGSPErrTangNeVDopuske;
         string str_err;
+
+        int timeTPVKZoomChange;//переменная для анализа задержки 250 мс для зума ТПВК
+
+        int TPVKZoomPrev;//предыдущее значение зума
+        int TPVKZoom3Count;//счетчик пакетов при посылке 3х пакета зума
+        bool TPVKZoomPacketsSeries;//признак пакета 3х зума
+        int TPVKZoomMeditVal;//промежуточное значение при посылке 3х пакета зума
+
+        bool TPVKCalibrationEngaged;//признак калибровки
+        int TPVKCalibration3Count;//счетчик пакетов при посылке 3х пакета калибровки
+        bool TPVKCalibrationPacketsSeries;//признак пакета 3х калибровки
+        byte TPVKCalibrationMeditVal;//промежуточное значение при посылке 3х пакета калибровки
 
         public int JoystickZoneInsensibilityY
         {
@@ -230,6 +246,9 @@ namespace MOSSimulator
             tmrMUGSPErrors.Resolution = 0;
             tmrMUGSPErrors.SynchronizingObject = null;
             tmrMUGSPErrors.Tick += new System.EventHandler(this.tmrMUGSPErrors_Tick);
+            MUGSPSpeedNavFixed = false;
+            AZValue = 0;
+            ELValue = 0;
 
             st_out = new StructureCommand();
             //st_in = new StructureCommand();            
@@ -281,7 +300,6 @@ namespace MOSSimulator
             arrayCycleDeviceOrder[6] = 0;
             arrayCycleDeviceOrder[7] = 4;//ЛД
 
-
             tagUartReceived = true;//для самого первого цикла в циклограмме
             locker = new object();
             locker2 = new object();
@@ -306,7 +324,7 @@ namespace MOSSimulator
             CAM_FocusModeInq = false;
 
             LDCommandSend = false;
-            JoystickKeyboardsStates= new bool[4];
+            JoystickKeyboardsStates= new bool[5];
             activeDevicesArr = new bool[5];
             for (int i = 0; i < 5; i++)
                 activeDevicesArr[i] = false;
@@ -323,6 +341,22 @@ namespace MOSSimulator
             CountMUGSPErrAzNeVDopuske = 0;
             CountMUGSPErrTangNeVDopuske = 0;
             str_err = "";
+
+            timeTPVKZoomChange = Environment.TickCount;
+            TPVKZoomPrev = 0;
+            TPVKZoom3Count = 0;
+            TPVKZoomPacketsSeries = false;
+            TPVKZoomMeditVal = 0;
+
+            TPVKCalibrationEngaged=false;
+            TPVKCalibration3Count=0;
+            TPVKCalibrationPacketsSeries=false;
+
+            sliderTPVKGain.IsEnabled = false;
+            numTPVKGain.IsEnabled = false;
+            sliderTPVKLevel.IsEnabled = false;
+            numTPVKLevel.IsEnabled = false;
+            comboBoxTPVKExpositionMode.IsEnabled = true;
         }
         private void Log_Click(object sender, RoutedEventArgs e)
         {
@@ -351,6 +385,18 @@ namespace MOSSimulator
             DoEvents(); //Application.DoEvents();
         }
 
+        void TPVKZoomUp()
+        {
+            sliderTPVKZoom.Value++;
+            ControlChanged(null, null);
+        }
+
+        void TPVKZoomDown()
+        {
+            sliderTPVKZoom.Value--;
+            ControlChanged(null, null);
+        }
+
         void myJoystickStateReceived(MyJoystickState state)
         {
             //if (joystickWindow == null)
@@ -361,6 +407,22 @@ namespace MOSSimulator
                 {
                     joystickWindow.textBoxJoystickXVal.Text = state.x.ToString();
                     joystickWindow.textBoxJoystickYVal.Text = state.y.ToString();
+                }
+
+                if (state.buttons[0])//курок
+                {                    
+                    JoystickKeyboardsStates[4] = true;
+                    //MUGSPSpeedNavFixed = !MUGSPSpeedNavFixed;//признак блокировки наведения по скорости при управлении джойстиком
+                    //checkBoxMUGSPSpeedNavFixed.IsChecked = MUGSPSpeedNavFixed;
+                }
+                else
+                {
+                    if (JoystickKeyboardsStates[4] == true && (bool)checkBoxJoystickUse.IsChecked)
+                    {
+                        MUGSPSpeedNavFixed = !MUGSPSpeedNavFixed;//признак блокировки наведения по скорости при управлении джойстиком
+                        checkBoxMUGSPSpeedNavFixed.IsChecked = MUGSPSpeedNavFixed;
+                        JoystickKeyboardsStates[4] = false;
+                    }
                 }
 
                 if (state.buttons[1])
@@ -393,34 +455,44 @@ namespace MOSSimulator
 
                 if (state.buttons[2])
                 {
-                    buttonFocusRight_PreviewMouseLeftButtonDown(this, null);
+                    //buttonFocusRight_PreviewMouseLeftButtonDown(this, null);
+                    if (Environment.TickCount > timeTPVKZoomChange + 250)//задержка 250 мс для зума ТПВК
+                    {
+                        TPVKZoomUp();
+                        timeTPVKZoomChange = Environment.TickCount;
+                    }
                     JoystickKeyboardsStates[1] = true;
                 }
                 else
                 {
                     if (JoystickKeyboardsStates[1] == true)
                     {
-                        buttonFocusRight_PreviewMouseLeftButtonUp(this, null);
+                        //buttonFocusRight_PreviewMouseLeftButtonUp(this, null);
                         JoystickKeyboardsStates[1] = false;
                     }
                 }
 
                 if (state.buttons[4])
                 {
-                    buttonFocusLeft_PreviewMouseLeftButtonDown(this, null);
+                    //buttonFocusLeft_PreviewMouseLeftButtonDown(this, null);
+                    if (Environment.TickCount > timeTPVKZoomChange + 250)//задержка 250 мс для зума ТПВК
+                    {
+                        TPVKZoomDown();
+                        timeTPVKZoomChange = Environment.TickCount;
+                    }                    
                     JoystickKeyboardsStates[3] = true;
                 }
                 else
                 {
                     if (JoystickKeyboardsStates[3] == true)
                     {
-                        buttonFocusLeft_PreviewMouseLeftButtonUp(this, null);
+                        //buttonFocusLeft_PreviewMouseLeftButtonUp(this, null);
                         JoystickKeyboardsStates[3] = false;
                     }
                 }
 
 
-                if ((bool)checkBoxJoystickUse.IsChecked)
+                if ((bool)checkBoxJoystickUse.IsChecked && !MUGSPSpeedNavFixed)
                 {                    
                     //значения сохраняются, т.к. state изменяется в другом потоке (джойстика)
                     int state_x = state.x - 32768;//коррекция значения положения ручки джойстика X для приведения к диапазону -32768..32767
@@ -505,7 +577,7 @@ namespace MOSSimulator
         }
         private void buttonStart_Click(object sender, RoutedEventArgs e)
         {
-            uart = UartConnect();
+                uart = UartConnect();
         }
 
         Uart UartConnect()
@@ -538,26 +610,11 @@ namespace MOSSimulator
                         buttonStart.Background = Brushes.LightGreen;
 
                         //основной режим, циклическая посылка пакетов
-                        if ((bool)chbCycleMode.IsChecked)
-                        {
-                            // создаем новый поток
-                            uartThread = new Thread(new ThreadStart(InitSendCommand));
-                            uartThread.Start(); // запускаем поток
-                            tmrMUGSPErrors.Start();
-                            //uartThread.Join();
-
-                            //InitSendCommand();
-                            //tmrExchange.Period = 1;
-                            //tmrExchange.Mode = Multimedia.TimerMode.Periodic;
-                            //tmrExchange.Start();
-                        }
-                        else
-                        {
-                            InitSendCommand();
-                            //tmrExchange.Period = 1;
-                            //tmrExchange.Mode = Multimedia.TimerMode.OneShot;
-                            //tmrExchange.Start();
-                        }                        
+                        // создаем новый поток
+                        uartThread = new Thread(new ThreadStart(InitSendCommand));
+                        uartThread.Start(); // запускаем поток
+                        tmrMUGSPErrors.Start();
+                        //uartThread.Join();                        
                     }
                     else
                     {
@@ -568,55 +625,66 @@ namespace MOSSimulator
                 catch (Exception ex)
                 {
                     MessageBox.Show(ex.Message);
+                    frmLog.WriteLine(Encoding.Default.GetBytes("UartConnect() uart.isOpen() == false Exception error" + ex.ToString()), this, 0);
+                    return null;
                 }
             }
             else//порт открыт, остановка
             {
-                if((bool)chbCycleMode.IsChecked == true)
+                try
                 {
+                    tmrMUGSPErrors.Stop();                    
+                    //остановить рабочий поток посылки сообщений ДО закрытия последовательного порта uart !
+                    if (uartThread != null)
+                    {
+                        uartThread.Abort();
+                        uartThread.Join();
+                    }
                     uart.DesetFalse();
-                    tmrMUGSPErrors.Stop();
-                    //cntStartErrors = 0; cntTimeOuts = 0; cntChkSums = 0; numOfPocket = 0; cntSuccess = 0;
-                    //cntOrderErrors = 0;
-
-                    //while (tmrExchange.IsRunning)
-                    //    DoEvents(); //Application.DoEvents();
-                    //tmrExchange.Stop();
-
-                    uartThread.Abort();
-                    uartThread.Join();
                     cycleIndex = 0;
                     setTagUartReceived(true);
-                    uart.Close();
-
-                    lblSuccess.Content = String.Format("Усп. пакетов: {0}", cntSuccess.ToString());
-                    lblStatusUART.Content = String.Format("Статус обмена: {0}", "");
-                    lblStartErrors.Content = String.Format("Ошибки старт. байта: {0}", cntStartErrors.ToString());
-                    lblErrorChkSums.Content = String.Format("Ошибки контр. суммы: {0}", cntChkSums.ToString());
-                    lblTimeOuts.Content = String.Format("Превыш. времени ожидания: {0}", cntTimeOuts.ToString());
-                    lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
-                    lblOrderErrors.Content = String.Format("Ошибки циклограммы: {0}", cntOrderErrors.ToString());                    
-
-                    buttonStart.Content = "Старт";
-                    buttonStart.Background = Brushes.LightGray;
-                    cbComPorts.IsEnabled = true;
+                    if (uart != null)
+                        uart.Close();
                     uart = null;
-                    //frmLog.Close_();
-                }
-                else//порт открыт И однократная посылка
-                {
-                    cntStartErrors = 0; cntTimeOuts = 0; cntChkSums = 0; numOfPocket = 0; cntSuccess = 0; cntOrderErrors = 0;
-                    uart.received += uart_received;
-                    uart.showBufferWasSent += uart_bufferSent;
-                    cbComPorts.IsEnabled = false;
-                    buttonStart.Content = "Стоп";
-                    buttonStart.Background = Brushes.LightGreen;
 
-                    InitSendCommand();
-                    //tmrExchange.Period = 1;
-                    //tmrExchange.Mode = Multimedia.TimerMode.OneShot;
-                    //tmrExchange.Start();  
+                    ///
+                    //MyJoystick.Close();
+                    if (ldStatusWindow != null)
+                        ldStatusWindow.Close();
+                    if (tvk1StatusWindow != null)
+                        tvk1StatusWindow.Close();
+                    if (tvk2StatusWindow != null)
+                        tvk2StatusWindow.Close();
+                    if (tpvkStatusWindow != null)
+                        tpvkStatusWindow.Close();
+                    //DoEvents(); //Application.DoEvents();
+                    ///
+
                 }
+                catch (Exception ex)
+                {
+                    //MessageBox.Show(ex.Message);
+                    Debug.WriteLine("UartConnect() Exception error", ex.ToString());
+                    
+                    String str_exc = "UartConnect() Exception error"+ ex.ToString();
+                    frmLog.WriteLine(Encoding.Default.GetBytes("UartConnect() uart.isOpen() == true Exception error" + ex.ToString()), this, 0);
+                    uart = null;
+                    return null;
+                }
+
+
+                lblSuccess.Content = String.Format("Усп. пакетов: {0}", cntSuccess.ToString());
+                lblStatusUART.Content = String.Format("Статус обмена: {0}", "");
+                lblStartErrors.Content = String.Format("Ошибки старт. байта: {0}", cntStartErrors.ToString());
+                lblErrorChkSums.Content = String.Format("Ошибки контр. суммы: {0}", cntChkSums.ToString());
+                lblTimeOuts.Content = String.Format("Превыш. времени ожидания: {0}", cntTimeOuts.ToString());
+                lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
+                lblOrderErrors.Content = String.Format("Ошибки циклограммы: {0}", cntOrderErrors.ToString());                    
+
+                buttonStart.Content = "Старт";
+                buttonStart.Background = Brushes.LightGray;
+                cbComPorts.IsEnabled = true;
+                //uart = null;
             }
 
             return uart;
@@ -790,13 +858,13 @@ namespace MOSSimulator
                         byteArr[1] ^= 1 << 7;
 
                         val = -(BitConverter.ToInt32(byteArr, 0) + 1);
-                        val = (int)(val * koeff_lsb_speed);
+                        val = (int)(val * koeff_lsb_speed / 2.833333333);
                         tbAZAngle2.Text = val.ToString();
                     }
                     else
                     {
                         val = BitConverter.ToInt32(byteArr, 0);
-                        val = (int)(val * koeff_lsb_speed);
+                        val = (int)(val * koeff_lsb_speed/2.833333333);
                         tbAZAngle2.Text = val.ToString();
                     }
 
@@ -839,13 +907,13 @@ namespace MOSSimulator
                         byteArr[1] ^= 1 << 7;
 
                         val = -(BitConverter.ToInt32(byteArr, 0) + 1);
-                        val = (int)(val * koeff_lsb_speed);
+                        val = (int)(val * koeff_lsb_speed / 2.833333333);
                         tbELAngle2.Text = val.ToString();
                     }
                     else
                     {
                         val = BitConverter.ToInt32(byteArr, 0);
-                        val = (int)(val * koeff_lsb_speed);
+                        val = (int)(val * koeff_lsb_speed / 2.833333333);
                         tbELAngle2.Text = val.ToString();
                     }
 
@@ -1344,9 +1412,14 @@ namespace MOSSimulator
                     {
                         textBoxTPVKREADY_IN.Text = "";
                         if (!bitArray.Get(0))
-                            textBoxTPVKREADY_IN.Text += "0\n";
+                            textBoxTPVKREADY_IN.Text += "Питание отключено\n";
                         else
-                            textBoxTPVKREADY_IN.Text += "1\n";
+                            textBoxTPVKREADY_IN.Text += "Питание включено\n";
+                        if (!bitArray.Get(2))
+                            textBoxTPVKREADY_IN.Text += "Данные не передаются\n";
+                        else
+                            textBoxTPVKREADY_IN.Text += "Данные передаются\n";
+                        
                         if (tpvkStatusWindow != null)
                             tpvkStatusWindow.fillData(strStatusTPVK);
                     }));
@@ -1595,24 +1668,6 @@ namespace MOSSimulator
             sliderELAngle.Value = (int)numELAngle.Value;
             ControlChanged(sender, e);
         }
-
-        private void buttonSendOnce_Click(object sender, RoutedEventArgs e)
-        {            
-            chbCycleMode.IsChecked = false;
-            if (lblStatusUART.Foreground == Brushes.Red)
-                lblStatusUART.Foreground = Brushes.Black;
-
-            lblSuccess.Content = String.Format("Усп. пакетов: {0}", "");
-            lblStatusUART.Content = String.Format("Статус обмена: {0}", "");
-            lblStartErrors.Content = String.Format("Ошибки старт. байта: {0}", "");
-            lblErrorChkSums.Content = String.Format("Ошибки контр. суммы: {0}", "");
-            lblTimeOuts.Content = String.Format("Превыш. времени ожидания: {0}", "");
-            lblOrderErrors.Content = String.Format("Ошибки циклограммы: {0}", "");
-
-            UartConnect();
-            //InitSendCommand();
-        }
-
         private void cbStartOperation_Checked(object sender, RoutedEventArgs e)
         {
             ControlChanged(sender, e);
@@ -1834,6 +1889,11 @@ namespace MOSSimulator
             //comboBoxLDCommands.Items.Add("Технол. цикл с включ. блок. излучения");
             if ((bool)checkBoxLDBlokirovkaFPU.IsChecked)
                 comboBoxLDCommands.Items.Add("Технол. цикл с  включ. блок. ФПУ");
+            else
+            {
+                comboBoxLDCommands.Items.Add("Измерить дальность с фильтром");
+                comboBoxLDCommands.Items.Add("Измерить дальность без фильтра");
+            }
             comboBoxLDCommands.SelectedIndex = 0;
             ControlChanged(sender, e);
         }
@@ -1877,6 +1937,11 @@ namespace MOSSimulator
             //comboBoxLDCommands.Items.Add("Измерить дальность без фильтра");
             if ((bool)checkBoxLDBlokirovkaIzluch.IsChecked)
                 comboBoxLDCommands.Items.Add("Технол. цикл с включ. блок. излучения");
+            else
+            {
+                comboBoxLDCommands.Items.Add("Измерить дальность с фильтром");
+                comboBoxLDCommands.Items.Add("Измерить дальность без фильтра");
+            }
             //comboBoxLDCommands.Items.Add("Технол. цикл с  включ. блок. ФПУ");
             comboBoxLDCommands.SelectedIndex = 0;
             ControlChanged(sender, e);
@@ -2354,8 +2419,8 @@ namespace MOSSimulator
             if (uart!= null && uart.isOpen())
             {
                 uart.DesetFalse();
-                uartThread.Abort();
-                uartThread.Join();
+                //uartThread.Abort();
+                //uartThread.Join();
                 cycleIndex = 0;
                 setTagUartReceived(true);
                 if(uart!=null)
@@ -2368,6 +2433,12 @@ namespace MOSSimulator
             }
             //if (sets != null)
             //    SaveSettings();
+            if (uartThread != null)
+            {
+                uartThread.Abort();
+                uartThread.Join();
+            }
+
             MyJoystick.Close();
             if(ldStatusWindow!=null)
                 ldStatusWindow.Close();
@@ -3071,11 +3142,13 @@ namespace MOSSimulator
 
         private void checkBoxTPVKAutoexposition_Unchecked(object sender, RoutedEventArgs e)
         {
+            comboBoxTPVKExpositionMode.IsEnabled = true;
             ControlChanged(sender, e);
         }
 
         private void checkBoxTPVKAutoexposition_Checked(object sender, RoutedEventArgs e)
         {
+            comboBoxTPVKExpositionMode.IsEnabled = false;
             ControlChanged(sender, e);
         }
 
@@ -3277,6 +3350,225 @@ namespace MOSSimulator
                     CountMUGSPErrAzNeVDopuske = 0;
                     CountMUGSPErrTangNeVDopuske = 0;
                 }));
+        }
+
+        private void sliderTPVKZoom_TouchLeave(object sender, TouchEventArgs e)
+        {
+            sliderTPVKZoom.Value = (int)numTPVKZoom.Value;
+            ControlChanged(sender, e);
+        }
+
+        private void sliderTPVKZoom_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (numTPVKZoom != null)
+            {
+                numTPVKZoom.Value = (int)sliderTPVKZoom.Value;
+                ControlChanged(sender, e);
+            }
+        }
+
+        private void sliderTPVKFocus_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            numTPVKFocus.Value = (int)sliderTPVKFocus.Value;
+            ControlChanged(sender, e);
+        }
+
+        private void sliderTPVKFocus_TouchLeave(object sender, TouchEventArgs e)
+        {
+            sliderTPVKFocus.Value = (int)numTPVKFocus.Value;
+            ControlChanged(sender, e);
+        }
+
+        private void numTPVKZoom_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            sliderTPVKZoom.Value = (int)numTPVKZoom.Value;
+            ControlChanged(sender, e);
+        }
+
+        private void numTPVKFocus_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            sliderTPVKFocus.Value = (int)numTPVKFocus.Value;
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxTPVKCalibration_Checked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void checkBoxTPVKCalibration_Unchecked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void radioButtonTPVKModeVkl_Checked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void radioButtonTPVKModeDejurn_Checked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void radioButtonTPVKPolarityWhite_Checked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void radioButtonTPVKPolarityBlack_Checked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void radioButtonTPVKContrastRuch_Checked(object sender, RoutedEventArgs e)
+        {
+            sliderTPVKGain.IsEnabled = true;
+            numTPVKGain.IsEnabled = true;
+            sliderTPVKLevel.IsEnabled = true;
+            numTPVKLevel.IsEnabled = true;
+            ControlChanged(sender, e);
+        }
+
+        private void radioButtonTPVKContrastAuto_Checked(object sender, RoutedEventArgs e)
+        {
+            sliderTPVKGain.IsEnabled = false;
+            numTPVKGain.IsEnabled = false;
+            numTPVKGain.Value = 0;
+            sliderTPVKLevel.IsEnabled = false;
+            numTPVKLevel.IsEnabled = false;
+            numTPVKLevel.Value = 0;
+            ControlChanged(sender, e);
+        }
+
+        private void radioButtonTPVKPolarityWhite1_Checked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void radioButtonTPVKMarkBlack_Checked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void radioButtonTPVKMarkGray_Checked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void radioButtonTPVKMarkWhite_Checked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void sliderTPVKDigitalZoom_TouchLeave(object sender, TouchEventArgs e)
+        {
+            sliderTPVKDigitalZoom.Value = (int)numTPVKDigitalZoom.Value;
+            ControlChanged(sender, e);
+        }
+
+        private void sliderTPVKGain_TouchLeave(object sender, TouchEventArgs e)
+        {
+            sliderTPVKGain.Value = (int)numTPVKGain.Value;
+            ControlChanged(sender, e);
+        }
+
+        private void sliderTPVKLevel_TouchLeave(object sender, TouchEventArgs e)
+        {
+            sliderTPVKLevel.Value = (int)numTPVKLevel.Value;
+            ControlChanged(sender, e);
+        }
+
+        private void sliderTPVKDigitalZoom_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            numTPVKDigitalZoom.Value = (int)sliderTPVKDigitalZoom.Value;
+            ControlChanged(sender, e);
+        }
+
+        private void sliderTPVKGain_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if(numTPVKGain!=null)
+                numTPVKGain.Value = (int)sliderTPVKGain.Value;
+            ControlChanged(sender, e);
+        }
+
+        private void sliderTPVKLevel_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (numTPVKLevel != null)
+                numTPVKLevel.Value = (int)sliderTPVKLevel.Value;
+            ControlChanged(sender, e);
+        }
+
+        private void numTPVKDigitalZoom_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            sliderTPVKDigitalZoom.Value = (int)numTPVKDigitalZoom.Value;
+            ControlChanged(sender, e);
+        }
+
+        private void numTPVKGain_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            sliderTPVKGain.Value = (int)numTPVKGain.Value;
+            ControlChanged(sender, e);
+        }
+
+        private void numTPVKLevel_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            sliderTPVKLevel.Value = (int)numTPVKLevel.Value;
+            ControlChanged(sender, e);
+        }
+
+        private void comboBoxTPVKExpositionMode_DropDownClosed(object sender, EventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void radioButtonTPVKMarkOff_Checked(object sender, RoutedEventArgs e)
+        {
+            ControlChanged(sender, e);
+        }
+
+        private void sliderTPVKEnhancementEdge_TouchLeave(object sender, TouchEventArgs e)
+        {
+            sliderTPVKEnhancementEdge.Value = (int)numTPVKEnhancementEdge.Value;
+            ControlChanged(sender, e);
+        }
+
+        private void sliderTPVKEnhancementEdge_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (numTPVKEnhancementEdge != null)
+                numTPVKEnhancementEdge.Value = (int)sliderTPVKEnhancementEdge.Value;
+            ControlChanged(sender, e);
+        }
+
+        private void numTPVKEnhancementEdge_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            sliderTPVKEnhancementEdge.Value = (int)numTPVKEnhancementEdge.Value;
+            ControlChanged(sender, e);
+        }
+
+        private void numTPVKEnhancementContrastModes_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            sliderTPVKEnhancementContrastModes.Value = (int)numTPVKEnhancementContrastModes.Value;
+            ControlChanged(sender, e);
+        }
+
+        private void sliderTPVKEnhancementContrastModes_TouchLeave(object sender, TouchEventArgs e)
+        {
+            sliderTPVKEnhancementContrastModes.Value = (int)numTPVKEnhancementContrastModes.Value;
+            ControlChanged(sender, e);
+        }
+
+        private void sliderTPVKEnhancementContrastModes_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (numTPVKEnhancementContrastModes != null)
+                numTPVKEnhancementContrastModes.Value = (int)sliderTPVKEnhancementContrastModes.Value;
+            ControlChanged(sender, e);
+        }
+
+        private void buttonTPVKCalibration_Click(object sender, RoutedEventArgs e)
+        {
+            TPVKCalibrationEngaged = true;
+            ControlChanged(sender, e);
         }
 
         /// <summary>
@@ -3951,7 +4243,7 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                      comTVK2.DATA[3] = byteArray[0];
                      comTVK2.DATA[4] = byteArray[1];
 
-                     if (st_outTVK2.CAPTURE_MODE == 0)
+                     if (st_outTVK2.CAPTURE_MODE == 0)//binning mode
                      {
                          UInt16 val = 0x0591;
                          byteArray = BitConverter.GetBytes(val);
@@ -3964,19 +4256,21 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                          bitArray.Set(3, true);//115 регистр = 0х0008
                          bitArray.Set(4, true);//116 регистр = 03
                          bitArray.Set(5, true);//116 регистр = 03
+                         bitArray.Set(6, true);//100 регистр = 03
+                         bitArray.Set(7, true);//100 регистр = 03
 
                          comTVK2.DATA[9] = ConvertToByte(bitArray);
 
-                         val = 0x00e6;//116 регистр = e6
+                         val = 0x0082;//116 регистр = 82
                          byteArray = BitConverter.GetBytes(val);
                          comTVK2.DATA[10] = byteArray[0];
 
-                         val = 0x6040;
+                         val = 0x6040;//(79 = 1 и 106 = 0x2040 регистры) = 0x6040 
                          byteArray = BitConverter.GetBytes(val);
                          comTVK2.DATA[20] = byteArray[0];
                          comTVK2.DATA[21] = byteArray[1];
                      }
-                     if (st_outTVK2.CAPTURE_MODE == 1)
+                     if (st_outTVK2.CAPTURE_MODE == 1)//режим центральная часть матрицы
                      {
                          UInt16 val = 0x0776;
                          byteArray = BitConverter.GetBytes(val);
@@ -4001,8 +4295,35 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                          comTVK2.DATA[20] = byteArray[0];
                          comTVK2.DATA[21] = byteArray[1];
                      }
+                    if (st_outTVK2.CAPTURE_MODE == 2)//pixel-pixel mode
+                    {
+                        UInt16 val = 1910;
+                        byteArray = BitConverter.GetBytes(val);
+                        comTVK2.DATA[5] = byteArray[0];
+                        comTVK2.DATA[6] = byteArray[1];
+                        comTVK2.DATA[7] = byteArray[0];
+                        comTVK2.DATA[8] = byteArray[1];
 
-                     byte[] byteArrayEXPOSURE = BitConverter.GetBytes(st_outTVK2.EXPOSURE);
+                        bitArray.SetAll(false);
+                        bitArray.Set(3, false);//115 регистр = 0х0000
+                        bitArray.Set(4, true);//116 регистр = 03
+                        bitArray.Set(5, true);//116 регистр = 03
+                        bitArray.Set(6, true);//100 регистр = 03
+                        bitArray.Set(7, true);//100 регистр = 03
+
+                        comTVK2.DATA[9] = ConvertToByte(bitArray);
+
+                        val = 0x0082;//116 регистр = 82
+                        byteArray = BitConverter.GetBytes(val);
+                        comTVK2.DATA[10] = byteArray[0];
+
+                        val = 0x6040;//(79 = 1 и 106 = 0x2040 регистры) = 0x6040
+                        byteArray = BitConverter.GetBytes(val);
+                        comTVK2.DATA[20] = byteArray[0];
+                        comTVK2.DATA[21] = byteArray[1];
+                    }
+
+                    byte[] byteArrayEXPOSURE = BitConverter.GetBytes(st_outTVK2.EXPOSURE);
                      comTVK2.DATA[11] = byteArrayEXPOSURE[0];
                      comTVK2.DATA[12] = byteArrayEXPOSURE[1];
                      comTVK2.DATA[13] = byteArrayEXPOSURE[2];
@@ -4109,25 +4430,88 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
 
 
                      comTPVK.DATA[0] = ConvertToByte(bitArray);
+  
+                    BitArray bitArray2 = new BitArray(8);
+                    bitArray2.SetAll(false);
 
-                     /*byteArray = BitConverter.GetBytes(st_outTVK2.CONTRAST_GAIN);
-                     comTPVK.DATA[1] = byteArray[0];
-                     comTPVK.DATA[2] = byteArray[1];
+                    //comTPVK.DATA[1] = st_outTPVK.MODE_POLARITY_AUTO_CONTRAST_V_READOUT_H_READOUT_CALIBRATION_SYNC_SOURCE_AUTO_CALIBRATION;
 
-                     byteArray = BitConverter.GetBytes(st_outTVK2.CONTRAST_OFFSET);
-                     comTPVK.DATA[3] = byteArray[0];
-                     comTPVK.DATA[4] = byteArray[1];*/
-                     ////                     
-                     comTPVK.DATA[1] = 0;
-                     comTPVK.DATA[2] = 0;
-                     comTPVK.DATA[3] = 0;
-                     comTPVK.DATA[4] = 0;
-                     comTPVK.DATA[5] = 0;
-                     comTPVK.DATA[6] = 0;
-                     comTPVK.DATA[7] = 0;
-                     comTPVK.DATA[8] = 0;
-                     comTPVK.DATA[9] = 0;
-                     comTPVK.DATA[10] = 0;                     
+                    ///////////////////////////////////////////////////
+                    //послать 3х пакета для Калибровки
+                    if (TPVKCalibrationEngaged && !TPVKCalibrationPacketsSeries)//если изменение калибровки и НЕТ серии пакетов 3х
+                    {
+                        TPVKCalibrationPacketsSeries = true;
+                        //промежуточное значение калибровки при посылке 3х пакетов                        
+                        TPVKCalibrationMeditVal = st_outTPVK.MODE_POLARITY_AUTO_CONTRAST_V_READOUT_H_READOUT_CALIBRATION_SYNC_SOURCE_AUTO_CALIBRATION;
+                    }
+                    if (!TPVKCalibrationEngaged && !TPVKZoomPacketsSeries)//посылка 0 отсутствии калибровки (TPVKCalibrationEngaged==false) и(или) окончании пакета 3х
+                    {
+                        byte[] myBytes = new byte[1];
+                        myBytes[0] = st_outTPVK.MODE_POLARITY_AUTO_CONTRAST_V_READOUT_H_READOUT_CALIBRATION_SYNC_SOURCE_AUTO_CALIBRATION;
+                        BitArray bitArrayCalibration = new BitArray(myBytes);
+                        bitArrayCalibration.Set(5, false);
+                        comTPVK.DATA[1] = ConvertToByte(bitArrayCalibration);
+                    }
+
+                    if (TPVKCalibrationPacketsSeries)//пакет 3х
+                    {
+                        if (TPVKCalibration3Count > 2)
+                        {
+                            TPVKCalibrationPacketsSeries = false;
+                            TPVKCalibration3Count = 0;
+                        }
+                        else
+                        {
+                            comTPVK.DATA[1] = (byte)TPVKCalibrationMeditVal;//посылка 3х пакета
+                            TPVKCalibration3Count++;
+                        }
+                    }
+                    ///////////////////////////////
+
+                    if (TPVKCalibrationEngaged)
+                        TPVKCalibrationEngaged = false;
+
+                    comTPVK.DATA[2] = st_outTPVK.IMAGE_POSITION_LAYING_MARK_DIGITAL_ZOOM_AUTO_EXPOSURE;
+
+                    byteArray = BitConverter.GetBytes(st_outTPVK.LEVEL);
+                    comTPVK.DATA[3] = byteArray[0];
+                    comTPVK.DATA[4] = byteArray[1];
+
+                    byteArray = BitConverter.GetBytes(st_outTPVK.GAIN);
+                    comTPVK.DATA[5] = byteArray[0];
+                    comTPVK.DATA[6] = byteArray[1];
+
+                    comTPVK.DATA[7] = st_outTPVK.EXPOSURE;
+                    comTPVK.DATA[8] = st_outTPVK.FOCUS;
+                    ///////////////////////////////////////////////////
+                    //послать 3х пакета для Zoom
+                    if (TPVKZoomPrev != st_outTPVK.ZOOM && !TPVKZoomPacketsSeries)//если изменение зума и НЕТ серии пакетов 3х
+                    {
+                        TPVKZoomPacketsSeries = true;                        
+                        TPVKZoomMeditVal = st_outTPVK.ZOOM;//промежуточное значение зума при посылке 3х пакетов                        
+                    }
+                    if (TPVKZoomPrev == st_outTPVK.ZOOM && !TPVKZoomPacketsSeries)//посылка 0 при одинаковых значениях и(или) окончании пакета 3х
+                    {
+                        comTPVK.DATA[9] = 0;
+                    }
+
+                    if (TPVKZoomPacketsSeries)//пакет 3х
+                    {
+                        if (TPVKZoom3Count > 2)
+                        {
+                            TPVKZoomPrev = TPVKZoomMeditVal;
+                            TPVKZoomPacketsSeries = false;
+                            TPVKZoom3Count = 0;
+                        }
+                        else
+                        {
+                            comTPVK.DATA[9] = (byte)TPVKZoomMeditVal;//посылка 3х пакета
+                            TPVKZoom3Count++;
+                        }
+                    }
+                    ///////////////////////////////
+
+                    comTPVK.DATA[10] = st_outTPVK.ENHANCE;                     
 
                      buf_chksum_all[0] = comTPVK.START;
                      buf_chksum_all[1] = comTPVK.ADDRESS;
@@ -4277,7 +4661,7 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                          lblNumPacks.Content = "Послано пакетов: " + numOfPocket.ToString();
                      }));
 
-                    uart.SendCommand(comLD, this);
+                     uart.SendCommand(comLD, this);
                      numOfPocket++;
                      setTagUartReceived(false); //tagUartReceived устанавливаем в false при ПЕРЕДАЧЕ пакета и ЖДЕМ приема пакета !
                      currentDevice = Device.MU_GSP;
@@ -4385,7 +4769,7 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
             byte[] byteArrayAZ = new byte[3];
             byte[] byteArrayEL = new byte[3];
 
-            int AZValue=0 , ELValue = 0;
+            //int AZValue=0 , ELValue = 0;
 
             //update array active devices
             if ((bool)checkBoxmMUGSPInfExchangeONOFF.IsChecked)
@@ -4450,7 +4834,7 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                 }                
                 else//если управление джойстиком
                 {
-                    if(NumJoystickK==1)
+                    if(!MUGSPSpeedNavFixed && NumJoystickK == 1)
                     {   //(умножение на 300 переменной AZSpeed т.к. ее значение 0..1  -- получаем значение в градусах в сек) и только при управлении джойстиком !
                         //и еще делим AZSpeed на / 0.00006103515625 чтобы получить в lsb
                         //деление на (0.2197265625 / 3600 * 60) в конце было -- в новой версии НЕ НАДО !  --> делим только на 60
@@ -4460,7 +4844,7 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                         if (AZValue > 0 && (AZValue > 81920))
                             AZValue = 81920;
                     }
-                    if (NumJoystickK == 2)
+                    if (!MUGSPSpeedNavFixed && NumJoystickK == 2)
                     {//(умножение на 300 переменной AZSpeed т.к. ее значение 0..1  -- получаем значение в градусах в сек) и только при управлении джойстиком !
                         //и еще делим AZSpeed на / 0.00006103515625 чтобы получить в lsb
                         //деление на (0.2197265625 / 3600 * 15) в конце было -- в новой версии НЕ НАДО !  --> делим только на 15
@@ -4470,7 +4854,7 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                         if (AZValue > 0 && (AZValue > 327680))
                             AZValue = 327680;
                     }
-                    if (NumJoystickK == 4)
+                    if (!MUGSPSpeedNavFixed && NumJoystickK == 4)
                     {//(умножение на 300 переменной AZSpeed т.к. ее значение 0..1  -- получаем значение в градусах в сек) и только при управлении джойстиком !
                         //и еще делим AZSpeed на / 0.00006103515625 чтобы получить в lsb
                         //деление на (0.2197265625 / 3600 * 15) в конце было -- в новой версии НЕ НАДО !  --> делим только на 3.333
@@ -4522,7 +4906,7 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                 }
                 else//если управление джойстиком
                 {
-                    if (NumJoystickK == 1)
+                    if (!MUGSPSpeedNavFixed && NumJoystickK == 1)
                     {   //(умножение на 300 переменной ELSpeed т.к. ее значение 0..1  -- получаем значение в градусах в сек) и только при управлении джойстиком !
                         //и еще делим ELSpeed на / 0.00006103515625 чтобы получить в lsb
                         //деление на (0.2197265625 / 3600 * 60) в конце было -- в новой версии НЕ НАДО !  --> делим только на 60
@@ -4532,7 +4916,7 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                         if (ELValue > 0 && (ELValue > 81920))
                             ELValue = 81920;
                     }
-                    if (NumJoystickK == 2)
+                    if (!MUGSPSpeedNavFixed && NumJoystickK == 2)
                     {//(умножение на 300 переменной ELSpeed т.к. ее значение 0..1  -- получаем значение в градусах в сек) и только при управлении джойстиком !
                         //и еще делим ELSpeed на / 0.00006103515625 чтобы получить в lsb
                         //деление на (0.2197265625 / 3600 * 15) в конце было -- в новой версии НЕ НАДО !  --> делим только на 15
@@ -4542,7 +4926,7 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                         if (ELValue > 0 && (ELValue > 327680))
                             ELValue = 327680;
                     }
-                    if (NumJoystickK == 4)
+                    if (!MUGSPSpeedNavFixed && NumJoystickK == 4)
                     {//(умножение на 300 переменной ELSpeed т.к. ее значение 0..1  -- получаем значение в градусах в сек) и только при управлении джойстиком !
                         //и еще делим ELSpeed на / 0.00006103515625 чтобы получить в lsb
                         //деление на (0.2197265625 / 3600 * 15) в конце было -- в новой версии НЕ НАДО !  --> делим только на 3.333
@@ -4722,11 +5106,206 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
             //data
             st_outTPVK.POWER = (bool)checkBoxTPVKONOFF.IsChecked;
             st_outTPVK.VIDEO_OUT_EN = (bool)checkBoxTPVKVIDEO_OUT_EN.IsChecked;
-            /*if ((bool)radioButtonExpoModeAuto.IsChecked)
-                st_outTPVK.MODE_POLARITY__AUTO_CALIBRATION = false;
-            else
-                st_outTPVK.MODE_POLARITY__AUTO_CALIBRATION = true;*/
 
+            BitArray bitArray0 = new BitArray(8);
+            bitArray0.SetAll(false);
+            if ((bool)radioButtonTPVKModeVkl.IsChecked)
+                bitArray0.Set(0, true);
+            if ((bool)radioButtonTPVKModeDejurn.IsChecked)
+                bitArray0.Set(0, false);
+            if ((bool)radioButtonTPVKPolarityWhite.IsChecked)
+                bitArray0.Set(1, true);
+            if ((bool)radioButtonTPVKPolarityBlack.IsChecked)
+                bitArray0.Set(1, false);
+            if ((bool)radioButtonTPVKContrastAuto.IsChecked)
+                bitArray0.Set(2, true);
+            if ((bool)radioButtonTPVKContrastRuch.IsChecked)
+                bitArray0.Set(2, false);
+            if (TPVKCalibrationEngaged)//КАЛИБРОВКА
+                bitArray0.Set(5, true);
+            else
+                bitArray0.Set(5, false);
+            if ((bool)checkBoxTPVKAutoCalibration.IsChecked)
+                bitArray0.Set(7, true);
+            else
+                bitArray0.Set(7, false);
+
+            st_outTPVK.MODE_POLARITY_AUTO_CONTRAST_V_READOUT_H_READOUT_CALIBRATION_SYNC_SOURCE_AUTO_CALIBRATION = ConvertToByte(bitArray0);
+
+            BitArray bitArray3 = new BitArray(8);
+            bitArray3.SetAll(false);
+
+
+            if ((bool)radioButtonTPVKMarkOff.IsChecked)
+            {
+                bitArray3.Set(2, false);
+                bitArray3.Set(3, false);
+            }
+            if ((bool)radioButtonTPVKMarkBlack.IsChecked)
+            {
+                bitArray3.Set(2, true);
+                bitArray3.Set(3, false);
+            }
+            if ((bool)radioButtonTPVKMarkGray.IsChecked)
+            {
+                bitArray3.Set(2, false);
+                bitArray3.Set(3, true);
+            }
+            if ((bool)radioButtonTPVKMarkWhite.IsChecked)
+            {
+                bitArray3.Set(2, true);
+                bitArray3.Set(3, true);
+            }
+            
+            if (numTPVKDigitalZoom.Value==1)
+            {
+                bitArray3.Set(4, false);
+                bitArray3.Set(5, false);
+            }
+            if (numTPVKDigitalZoom.Value ==2)
+            {
+                bitArray3.Set(4, true);
+                bitArray3.Set(5, false);
+            }
+            if (numTPVKDigitalZoom.Value ==3)
+            {
+                bitArray3.Set(4, false);
+                bitArray3.Set(5, true);
+            }
+            if (numTPVKDigitalZoom.Value ==4)
+            {
+                bitArray3.Set(4, true);
+                bitArray3.Set(5, true);
+            }
+
+            if ((bool)checkBoxTPVKAutoexposition.IsChecked)
+                bitArray3.Set(6, true);
+            else
+                bitArray3.Set(6, false);
+
+            st_outTPVK.IMAGE_POSITION_LAYING_MARK_DIGITAL_ZOOM_AUTO_EXPOSURE = ConvertToByte(bitArray3);
+
+            st_outTPVK.LEVEL = (ushort)numTPVKLevel.Value;
+            st_outTPVK.GAIN = (ushort)numTPVKGain.Value;
+
+            if (comboBoxTPVKExpositionMode.SelectedIndex == 0)
+                st_outTPVK.EXPOSURE = 0;
+            if (comboBoxTPVKExpositionMode.SelectedIndex == 1)
+                st_outTPVK.EXPOSURE = 1;
+            if (comboBoxTPVKExpositionMode.SelectedIndex == 2)
+                st_outTPVK.EXPOSURE = 2;
+
+            st_outTPVK.ZOOM = (byte)numTPVKZoom.Value;
+            st_outTPVK.FOCUS = (byte)numTPVKFocus.Value;
+
+            BitArray bitArray4 = new BitArray(8);
+            bitArray4.SetAll(false);
+
+
+            if ((bool)checkBoxTPVKImageEnhance.IsChecked)
+                bitArray4.Set(0, true);
+            else
+                bitArray4.Set(0, false);
+
+            if (numTPVKEnhancementEdge.Value == 0)
+            {
+                bitArray4.Set(1, false);
+                bitArray4.Set(2, false);
+                bitArray4.Set(3, false);
+            }
+            if (numTPVKEnhancementEdge.Value == 1)
+            {
+                bitArray4.Set(1, true);
+                bitArray4.Set(2, false);
+                bitArray4.Set(3, false);
+            }
+            if (numTPVKEnhancementEdge.Value == 2)
+            {
+                bitArray4.Set(1, false);
+                bitArray4.Set(2, true);
+                bitArray4.Set(3, false);
+            }
+            if (numTPVKEnhancementEdge.Value == 3)
+            {
+                bitArray4.Set(1, true);
+                bitArray4.Set(2, true);
+                bitArray4.Set(3, false);
+            }
+            if (numTPVKEnhancementEdge.Value == 4)
+            {
+                bitArray4.Set(1, false);
+                bitArray4.Set(2, false);
+                bitArray4.Set(3, true);
+            }
+            if (numTPVKEnhancementEdge.Value == 5)
+            {
+                bitArray4.Set(1, true);
+                bitArray4.Set(2, false);
+                bitArray4.Set(3, true);
+            }
+            if (numTPVKEnhancementEdge.Value == 6)
+            {
+                bitArray4.Set(1, false);
+                bitArray4.Set(2, true);
+                bitArray4.Set(3, true);
+            }
+            if (numTPVKEnhancementEdge.Value == 7)
+            {
+                bitArray4.Set(1, true);
+                bitArray4.Set(2, true);
+                bitArray4.Set(3, true);
+            }
+
+            //
+            if (numTPVKEnhancementContrastModes.Value == 0)
+            {
+                bitArray4.Set(4, false);
+                bitArray4.Set(5, false);
+                bitArray4.Set(6, false);
+            }
+            if (numTPVKEnhancementContrastModes.Value == 1)
+            {
+                bitArray4.Set(4, true);
+                bitArray4.Set(5, false);
+                bitArray4.Set(6, false);
+            }
+            if (numTPVKEnhancementContrastModes.Value == 2)
+            {
+                bitArray4.Set(4, false);
+                bitArray4.Set(5, true);
+                bitArray4.Set(6, false);
+            }
+            if (numTPVKEnhancementContrastModes.Value == 3)
+            {
+                bitArray4.Set(4, true);
+                bitArray4.Set(5, true);
+                bitArray4.Set(6, false);
+            }
+            if (numTPVKEnhancementContrastModes.Value == 4)
+            {
+                bitArray4.Set(4, false);
+                bitArray4.Set(5, false);
+                bitArray4.Set(6, true);
+            }
+            if (numTPVKEnhancementContrastModes.Value == 5)
+            {
+                bitArray4.Set(4, true);
+                bitArray4.Set(5, false);
+                bitArray4.Set(6, true);
+            }
+            if (numTPVKEnhancementContrastModes.Value == 6)
+            {
+                bitArray4.Set(4, false);
+                bitArray4.Set(5, true);
+                bitArray4.Set(6, true);
+            }
+            if (numTPVKEnhancementContrastModes.Value == 7)
+            {
+                bitArray4.Set(4, true);
+                bitArray4.Set(5, true);
+                bitArray4.Set(6, true);
+            }
+            st_outTPVK.ENHANCE = ConvertToByte(bitArray4);
             /* TPVK section END */
 
         }

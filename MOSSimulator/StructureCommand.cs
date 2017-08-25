@@ -200,7 +200,7 @@ namespace MOSSimulator
         public bool VIDEO_OUT_EN;
 
         public byte START_CODE;
-        public byte MODE_POLARITY__AUTO_CALIBRATION;
+        public byte MODE_POLARITY_AUTO_CONTRAST_V_READOUT_H_READOUT_CALIBRATION_SYNC_SOURCE_AUTO_CALIBRATION;
         public byte IMAGE_POSITION_LAYING_MARK_DIGITAL_ZOOM_AUTO_EXPOSURE;
         public ushort LEVEL;
         public ushort GAIN;
