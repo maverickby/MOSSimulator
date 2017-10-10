@@ -49,8 +49,8 @@
                                 <xctk:DoubleUpDown x:Name="numELAngle" Margin="168,42,0,0" Value="0" Increment="0.01" Maximum="180" Minimum="-180" Text="0" ValueChanged="numELAngle_ValueChanged" HorizontalAlignment="Left" VerticalAlignment="Top" Width="64" Grid.ColumnSpan="2" FormatString="F2"/>
                                 <Label x:Name="label" Content="ГН" HorizontalAlignment="Left" Margin="15,2,0,0" VerticalAlignment="Top" RenderTransformOrigin="-4.368,-1.739"/>
                                 <Label x:Name="label_Copy7" Content="ВН" HorizontalAlignment="Left" Margin="16,35,0,0" VerticalAlignment="Top" RenderTransformOrigin="-4.368,-1.739"/>
-                                <TextBox x:Name="tbAZAngle2" HorizontalAlignment="Left" Height="23" Margin="78,7,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="91" Grid.Column="1"/>
-                                <TextBox x:Name="tbELAngle2" HorizontalAlignment="Left" Height="23" Margin="78,39,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="91" Grid.Column="1"/>
+                                <TextBox x:Name="tbAZAngle2" HorizontalAlignment="Left" Height="23" Margin="78,7,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="91" Grid.Column="1" IsEnabled="False" Background="#FFABADB3"/>
+                                <TextBox x:Name="tbELAngle2" HorizontalAlignment="Left" Height="23" Margin="78,39,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="91" Grid.Column="1" IsEnabled="False" Background="#FFABADB3"/>
                                 <CheckBox x:Name="checkBoxGSPAngleseekAngle" Content="Слежение за углом" HorizontalAlignment="Left" Margin="171,95,0,0" VerticalAlignment="Top" Checked="checkBoxGSPAngleseekAngle_Checked" Unchecked="checkBoxLDONOFF_Unchecked" Grid.ColumnSpan="2" Click="checkBoxGSPAngleseekAngle_Click"/>
                                 <CheckBox x:Name="checkBoxGSPAngleAutoPereh" Content="Выполнить с авт. переходом" HorizontalAlignment="Left" Margin="171,77,0,0" VerticalAlignment="Top" Checked="checkBoxGSPAngleAutoPereh_Checked" Unchecked="checkBoxGSPAngleAutoPereh_Unchecked" Grid.ColumnSpan="2" Click="checkBoxGSPAngleAutoPereh_Click"/>
                             </Grid>
@@ -65,18 +65,18 @@
                                 </Grid.ColumnDefinitions>
                                 <Slider x:Name="sliderAZSpeed" HorizontalAlignment="Right" Margin="0,7,16,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="105" SmallChange="0.01" AutoToolTipPlacement="TopLeft" Maximum="300" Minimum="-300" TouchLeave="sliderAZSpeed_TouchLeave" ValueChanged="sliderAZSpeed_ValueChanged" Grid.ColumnSpan="2" Grid.Column="1"/>
                                 <xctk:DoubleUpDown x:Name="numAZSpeed" Margin="0,7,80,0" Value="0" Increment="0.01" Text="" ValueChanged="numAZSpeed_ValueChanged" Maximum="300" Minimum="-300" HorizontalAlignment="Right" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" Grid.ColumnSpan="2" Grid.Column="2" FormatString="F2" IsManipulationEnabled="True"/>
-                                <Button x:Name="buttonResetGSPSpeedControls" Content="Сброс" HorizontalAlignment="Left" Margin="10,206,0,0" VerticalAlignment="Top" Width="75" Click="buttonResetGSPSpeedControls_Click" Grid.ColumnSpan="2"/>
+                                <Button x:Name="buttonResetGSPSpeedControls" Content="Сброс" HorizontalAlignment="Left" Margin="7,165,0,0" VerticalAlignment="Top" Width="75" Click="buttonResetGSPSpeedControls_Click" Grid.ColumnSpan="2"/>
                                 <Slider x:Name="sliderELSpeed" Margin="0,30,16,0" VerticalAlignment="Top" ValueChanged="sliderELSpeed_ValueChanged" SmallChange="0.01" Maximum="300" Minimum="-300" AutoToolTipPlacement="TopLeft" TouchLeave="sliderELSpeed_TouchLeave" Grid.ColumnSpan="2" Grid.Column="1" HorizontalAlignment="Right" Width="105"/>
                                 <xctk:DoubleUpDown x:Name="numELSpeed" Margin="58,31,0,0" Value="0" Increment="0.01" Maximum="300" Minimum="-300" Text="0" ValueChanged="numELSpeed_ValueChanged" HorizontalAlignment="Left" VerticalAlignment="Top" Width="64" Grid.Column="2" Grid.ColumnSpan="2" FormatString="F2"/>
-                                <CheckBox x:Name="checkBoxJoystickUse" Content="Управление джойстиком" HorizontalAlignment="Left" Margin="58,170,0,0" VerticalAlignment="Top" Checked="checkBoxJoystickUse_Checked" Grid.ColumnSpan="3" Width="163" Grid.Column="1" Unchecked="checkBoxJoystickUse_Unchecked"/>
+                                <CheckBox x:Name="checkBoxJoystickUse" Content="Управление джойстиком" HorizontalAlignment="Left" Margin="63,181,0,0" VerticalAlignment="Top" Checked="checkBoxJoystickUse_Checked" Grid.ColumnSpan="3" Width="163" Grid.Column="1" Unchecked="checkBoxJoystickUse_Unchecked"/>
                                 <Label x:Name="label_Copy8" Content="ГН" HorizontalAlignment="Left" Margin="18,5,0,0" VerticalAlignment="Top" RenderTransformOrigin="-4.368,-1.739" Grid.ColumnSpan="2"/>
                                 <Label x:Name="label_Copy9" Content="ВН" HorizontalAlignment="Left" Margin="19,28,0,0" VerticalAlignment="Top" RenderTransformOrigin="-4.368,-1.739" Grid.ColumnSpan="2"/>
-                                <Label x:Name="label1" Content="Масштаб джойстика" HorizontalAlignment="Left" Margin="8,179,0,0" VerticalAlignment="Top" Grid.ColumnSpan="3"/>
-                                <RadioButton x:Name="radioButtonGSPSpeedControl1X" Content="1x" Margin="16,187,7,0" VerticalAlignment="Top" RenderTransformOrigin="0.148,-0.333" Grid.Column="2" IsChecked="True" Checked="radioButtonGSPSpeedControl1X_Checked"/>
-                                <RadioButton x:Name="radioButtonGSPSpeedControl2X" Content="2x" HorizontalAlignment="Left" Margin="58,187,0,0" VerticalAlignment="Top" RenderTransformOrigin="0.148,-0.333" Width="37" Grid.Column="2" Grid.ColumnSpan="2" Checked="radioButtonGSPSpeedControl2X_Checked"/>
-                                <RadioButton x:Name="radioButtonGSPSpeedControl4X" Content="4x" HorizontalAlignment="Right" Margin="0,188,65,0" VerticalAlignment="Top" RenderTransformOrigin="0.148,-0.333" Width="37" Grid.Column="3" Checked="radioButtonGSPSpeedControl4X_Checked"/>
-                                <CheckBox x:Name="checkBoxGSPSpeedControlsNonStabilized" Content="Нестабилизированное наведение" HorizontalAlignment="Left" Margin="58,151,0,0" VerticalAlignment="Top" Checked="checkBoxGSPSpeedControlsNonStabilized_Checked" Grid.ColumnSpan="3" Width="216" Grid.Column="1" Click="checkBoxGSPSpeedControlsNonStabilized_Click"/>
-                                <CheckBox x:Name="checkBoxMUGSPStabilizedAim" Content="Стабилизированное наведение" HorizontalAlignment="Left" Margin="58,132,0,0" VerticalAlignment="Top" Checked="checkBoxMUGSPStabilizedAim_Checked" Grid.ColumnSpan="3" Grid.Column="1" Click="checkBoxMUGSPStabilizedAim_Click"/>
+                                <Label x:Name="label1" Content="Масштаб джойстика" HorizontalAlignment="Left" Margin="8,200,0,0" VerticalAlignment="Top" Grid.ColumnSpan="3"/>
+                                <RadioButton x:Name="radioButtonGSPSpeedControl1X" Content="1x" Margin="16,208,7,0" VerticalAlignment="Top" RenderTransformOrigin="0.148,-0.333" Grid.Column="2" IsChecked="True" Checked="radioButtonGSPSpeedControl1X_Checked"/>
+                                <RadioButton x:Name="radioButtonGSPSpeedControl2X" Content="2x" HorizontalAlignment="Left" Margin="58,208,0,0" VerticalAlignment="Top" RenderTransformOrigin="0.148,-0.333" Width="37" Grid.Column="2" Grid.ColumnSpan="2" Checked="radioButtonGSPSpeedControl2X_Checked"/>
+                                <RadioButton x:Name="radioButtonGSPSpeedControl4X" Content="4x" HorizontalAlignment="Right" Margin="0,209,65,0" VerticalAlignment="Top" RenderTransformOrigin="0.148,-0.333" Width="37" Grid.Column="3" Checked="radioButtonGSPSpeedControl4X_Checked"/>
+                                <CheckBox x:Name="checkBoxGSPSpeedControlsNonStabilized" Content="Нестабилизированное наведение" HorizontalAlignment="Left" Margin="63,162,0,0" VerticalAlignment="Top" Checked="checkBoxGSPSpeedControlsNonStabilized_Checked" Grid.ColumnSpan="3" Width="216" Grid.Column="1" Click="checkBoxGSPSpeedControlsNonStabilized_Click"/>
+                                <CheckBox x:Name="checkBoxMUGSPStabilizedAim" Content="Стабилизированное наведение" HorizontalAlignment="Left" Margin="63,143,0,0" VerticalAlignment="Top" Checked="checkBoxMUGSPStabilizedAim_Checked" Grid.ColumnSpan="3" Grid.Column="1" Click="checkBoxMUGSPStabilizedAim_Click"/>
                                 <GroupBox x:Name="groupBoxvCompensationUvodov" Header="Компенсация уводов" HorizontalAlignment="Left" Margin="8,59,0,0" VerticalAlignment="Top" Grid.ColumnSpan="4" Width="259" Height="70">
                                     <Grid HorizontalAlignment="Left" Height="44" Margin="10,0,-2,-1" VerticalAlignment="Top" Width="239">
                                         <Slider x:Name="sliderAZSpeedCompensation" HorizontalAlignment="Right" Margin="0,2,87,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="105" SmallChange="0.01" AutoToolTipPlacement="TopLeft" Maximum="500" Minimum="-500" TouchLeave="sliderAZSpeedCompensation_TouchLeave" ValueChanged="sliderAZSpeedCompensation_ValueChanged"/>
@@ -100,10 +100,10 @@
                     <Grid HorizontalAlignment="Left" Width="676" Height="196" VerticalAlignment="Top" Margin="0,0,-2,-1">
                         <Label x:Name="label_Copy2" Content="Режим работы привода азимута" HorizontalAlignment="Left" Margin="17,3,0,0" VerticalAlignment="Top" Width="189"/>
                         <Label x:Name="label_Copy3" Content="Режим работы привода тангажа" HorizontalAlignment="Left" Margin="17,34,0,0" VerticalAlignment="Top" Width="189"/>
-                        <TextBox x:Name="tbModeAZ" HorizontalAlignment="Left" Height="23" Margin="252,7,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="395"/>
-                        <TextBox x:Name="tbModeEL" HorizontalAlignment="Left" Height="23" Margin="251,38,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="396"/>
+                        <TextBox x:Name="tbModeAZ" HorizontalAlignment="Left" Height="23" Margin="252,7,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="395" IsEnabled="False" Background="#FFABADB3"/>
+                        <TextBox x:Name="tbModeEL" HorizontalAlignment="Left" Height="23" Margin="251,38,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="396" IsEnabled="False" Background="#FFABADB3"/>
                         <GroupBox x:Name="groupErrors" Header="Признаки ошибок" HorizontalAlignment="Left" Margin="22,66,0,0" VerticalAlignment="Top" Height="126" Width="643">
-                            <TextBox x:Name="tbErrors" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto" HorizontalAlignment="Left" Margin="8,7,0,9" TextWrapping="Wrap" Width="610"/>
+                            <TextBox x:Name="tbErrors" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto" HorizontalAlignment="Left" Margin="8,7,0,9" TextWrapping="Wrap" Width="610" IsEnabled="False" Background="#FFABADB3"/>
                         </GroupBox>
                     </Grid>
                 </GroupBox>
@@ -114,7 +114,7 @@
         <ComboBox x:Name="cbComPorts" HorizontalAlignment="Left" Margin="85,10,0,0" Grid.Row="1" VerticalAlignment="Top" Width="69"/>
         <Button x:Name="buttonStart" Content="Старт обмена" HorizontalAlignment="Left" Margin="173,11,0,0" Grid.Row="1" VerticalAlignment="Top" Width="86" Click="buttonStart_Click"/>
         <StatusBar HorizontalAlignment="Left" Height="35" Margin="0,965,0,-16" Grid.Row="1" VerticalAlignment="Top" Width="1912">
-            <Label x:Name="lblStatusUART" Content="Статус обмена: " Width="178"/>
+            <Label x:Name="lblStatusUART" Content="Статус обмена: " Width="245"/>
             <Label x:Name="lblNumPacks" Content="Послано пакетов: " Width="182"/>
             <Label x:Name="lblSuccess" Content="Усп. пакетов: " Width="159"/>
             <Label x:Name="lblTimeOuts" Content="Превыш. времени ожид.: " Width="224"/>
@@ -122,33 +122,37 @@
             <Label x:Name="lblStartErrors" Content="Ошибки старт. байта: " Width="182"/>
             <Label x:Name="lblOrderErrors" Content="Ошибки циклограммы: " Width="182"/>
         </StatusBar>
-        <GroupBox x:Name="groupBoxTVK1" Header="ТВК 1" HorizontalAlignment="Left" Margin="994,628,0,0" Grid.Row="1" VerticalAlignment="Top" Height="332" Width="663">
-            <Grid HorizontalAlignment="Left" Margin="10,10,-2,1" Width="643">
+        <GroupBox x:Name="groupBoxTVK1" Header="ТВК 1" HorizontalAlignment="Left" Margin="994,628,0,0" Grid.Row="1" VerticalAlignment="Top" Height="332" Width="711">
+            <Grid HorizontalAlignment="Left" Margin="10,10,0,1" Width="680">
                 <CheckBox x:Name="checkBoxTVK1ONOFF" Content="Вкл/выкл камеры" HorizontalAlignment="Left" Margin="10,32,0,0" VerticalAlignment="Top" RenderTransformOrigin="3.972,1.267" Checked="checkBoxTVK1ONOFF_Checked" Unchecked="checkBoxTVK1ONOFF_Unchecked"/>
                 <Slider x:Name="sliderTVK1Zoom" HorizontalAlignment="Left" Margin="121,111,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="163" SmallChange="64" AutoToolTipPlacement="TopLeft" Maximum="16384" LargeChange="64" PreviewMouseLeftButtonUp="sliderTVK1Zoom_PreviewMouseLeftButtonUp"/>
-                <xctk:DoubleUpDown x:Name="numTVK1Zoom" Margin="215,133,0,0" Value="0" Increment="64" Text="" Maximum="16384" Minimum="0" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" DefaultValue="1" ValueChanged="numTVK1Zoom_ValueChanged"/>
+                <xctk:DoubleUpDown x:Name="numTVK1Zoom" Margin="215,138,0,0" Value="0" Increment="64" Text="" Maximum="16384" Minimum="0" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" DefaultValue="1" ValueChanged="numTVK1Zoom_ValueChanged"/>
                 <Label x:Name="labelTVK1Zoom" Content="Zoom:" HorizontalAlignment="Left" Margin="10,106,0,0" VerticalAlignment="Top" Width="55"/>
-                <Slider x:Name="sliderTVK1Focus" HorizontalAlignment="Left" Margin="121,164,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="163" SmallChange="573" AutoToolTipPlacement="TopLeft" Maximum="61440" Minimum="4096" LargeChange="573" Value="4096" PreviewMouseLeftButtonUp="sliderTVK1Focus_PreviewMouseLeftButtonUp"/>
-                <xctk:DoubleUpDown x:Name="numTVK1Focus" Margin="217,188,0,0" Value="4096" Increment="573" Text="" Maximum="61440" Minimum="4096" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" ValueChanged="numTVK1Focus_ValueChanged"/>
-                <Label x:Name="labelTVK1Zoom_Copy" Content="Фокус:" HorizontalAlignment="Left" Margin="10,159,0,0" VerticalAlignment="Top" Width="70"/>
-                <CheckBox x:Name="checkBoxTVK1CAM_FocusAuto" Content="Автофокус" HorizontalAlignment="Left" Margin="9,190,0,0" VerticalAlignment="Top" IsChecked="True" Width="86" Checked="checkBoxTVK1CAM_FocusAuto_Checked" Unchecked="checkBoxTVK1CAM_FocusAuto_Unchecked"/>
+                <Slider x:Name="sliderTVK1Focus" HorizontalAlignment="Left" Margin="121,174,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="163" SmallChange="573" AutoToolTipPlacement="TopLeft" Maximum="61440" Minimum="4096" LargeChange="573" Value="4096" PreviewMouseLeftButtonUp="sliderTVK1Focus_PreviewMouseLeftButtonUp"/>
+                <xctk:DoubleUpDown x:Name="numTVK1Focus" Margin="217,204,0,0" Value="4096" Increment="573" Text="" Maximum="61440" Minimum="4096" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" ValueChanged="numTVK1Focus_ValueChanged"/>
+                <Label x:Name="labelTVK1Zoom_Copy" Content="Фокус:" HorizontalAlignment="Left" Margin="10,169,0,0" VerticalAlignment="Top" Width="70"/>
+                <CheckBox x:Name="checkBoxTVK1CAM_FocusAuto" Content="Автофокус" HorizontalAlignment="Left" Margin="11,270,0,0" VerticalAlignment="Top" IsChecked="True" Width="86" Checked="checkBoxTVK1CAM_FocusAuto_Checked" Unchecked="checkBoxTVK1CAM_FocusAuto_Unchecked"/>
                 <Button x:Name="buttonTVK1StateRequest" Content="Опрос состояния" HorizontalAlignment="Left" Margin="531,270,0,0" VerticalAlignment="Top" Width="104" Click="buttonTVK1StateRequest_Click"/>
                 <CheckBox x:Name="checkBoxmTVK1InfExchangeONOFF" Content="Вкл/выкл информац. обмена с модулем" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Checked="checkBoxmTVK1InfExchangeONOFF_Checked" Unchecked="checkBoxmTVK1InfExchangeONOFF_Unchecked"/>
                 <CheckBox x:Name="checkBoxTVK1VIDEO_OUT_EN" Content="Вкл/выкл видеопотока" HorizontalAlignment="Left" Margin="10,74,0,0" VerticalAlignment="Top" Checked="checkBoxTVK1VIDEO_OUT_EN_Checked" Width="149" Unchecked="checkBoxTVK1VIDEO_OUT_EN_Unchecked"/>
                 <CheckBox x:Name="checkBoxTVK1VIDEO_IN_EN" Content="Вкл/выкл приемника видеоинформации" HorizontalAlignment="Left" Margin="10,53,0,0" VerticalAlignment="Top" RenderTransformOrigin="3.972,1.267" Width="256" Checked="checkBoxTVK1VIDEO_IN_EN_Checked" Unchecked="checkBoxTVK1VIDEO_IN_EN_Unchecked"/>
-                <Label x:Name="labelTVK1VIDEO_IN_STATE" Content="Сост. приемн. видеоинформации" HorizontalAlignment="Left" Margin="281,5,0,0" VerticalAlignment="Top" Width="208"/>
-                <Label x:Name="labelTVK1VIDEO_OUT_STATE_IN" Content="Сост. передатч. видеоинформации " HorizontalAlignment="Left" Margin="281,30,0,0" VerticalAlignment="Top" Width="208"/>
-                <TextBox x:Name="textBoxTVK1VIDEO_IN_STATE" HorizontalAlignment="Left" Height="23" Margin="489,7,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="147"/>
-                <TextBox x:Name="textBoxTVK1VIDEO_OUT_STATE_IN" HorizontalAlignment="Left" Height="23" Margin="489,34,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="147"/>
+                <Label x:Name="labelTVK1VIDEO_IN_STATE" Content="Состояние приемника видеоинформации:" HorizontalAlignment="Left" Margin="266,5,0,0" VerticalAlignment="Top" Width="250"/>
+                <Label x:Name="labelTVK1VIDEO_OUT_STATE_IN" Content="Состояние  передатчика видеоинформации: " HorizontalAlignment="Left" Margin="266,30,0,0" VerticalAlignment="Top" Width="259"/>
+                <TextBox x:Name="textBoxTVK1VIDEO_IN_STATE" HorizontalAlignment="Left" Height="23" Margin="525,7,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="147" IsEnabled="False" Background="#FFABADB3"/>
+                <TextBox x:Name="textBoxTVK1VIDEO_OUT_STATE_IN" HorizontalAlignment="Left" Height="23" Margin="525,34,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="147" IsEnabled="False" Background="#FFABADB3"/>
                 <Button x:Name="buttonZoomLeft" Content="-" HorizontalAlignment="Left" Margin="89,110,0,0" VerticalAlignment="Top" Width="22" RenderTransformOrigin="0.227,0.05" PreviewMouseLeftButtonUp="buttonZoomLeft_PreviewMouseLeftButtonUp" PreviewMouseLeftButtonDown="buttonZoomLeft_PreviewMouseLeftButtonDown"/>
-                <Button x:Name="buttonFocusLeft" Content="-" HorizontalAlignment="Left" Margin="89,163,0,0" VerticalAlignment="Top" Width="22" RenderTransformOrigin="0.227,0.05" PreviewMouseLeftButtonUp="buttonFocusLeft_PreviewMouseLeftButtonUp" PreviewMouseLeftButtonDown="buttonFocusLeft_PreviewMouseLeftButtonDown"/>
+                <Button x:Name="buttonFocusLeft" Content="-" HorizontalAlignment="Left" Margin="89,173,0,0" VerticalAlignment="Top" Width="22" RenderTransformOrigin="0.227,0.05" PreviewMouseLeftButtonUp="buttonFocusLeft_PreviewMouseLeftButtonUp" PreviewMouseLeftButtonDown="buttonFocusLeft_PreviewMouseLeftButtonDown"/>
                 <Button x:Name="buttonZoomRight" Content="+" HorizontalAlignment="Left" Margin="292,110,0,0" VerticalAlignment="Top" Width="22" RenderTransformOrigin="0.227,0.05" PreviewMouseLeftButtonUp="buttonZoomRight_PreviewMouseLeftButtonUp" PreviewMouseLeftButtonDown="buttonZoomRight_PreviewMouseLeftButtonDown" ClickMode="Press"/>
-                <Button x:Name="buttonFocusRight" Content="+" HorizontalAlignment="Left" Margin="292,163,0,0" VerticalAlignment="Top" Width="22" RenderTransformOrigin="0.227,0.05" PreviewMouseLeftButtonUp="buttonFocusRight_PreviewMouseLeftButtonUp" PreviewMouseLeftButtonDown="buttonFocusRight_PreviewMouseLeftButtonDown"/>
+                <Button x:Name="buttonFocusRight" Content="+" HorizontalAlignment="Left" Margin="292,173,0,0" VerticalAlignment="Top" Width="22" RenderTransformOrigin="0.227,0.05" PreviewMouseLeftButtonUp="buttonFocusRight_PreviewMouseLeftButtonUp" PreviewMouseLeftButtonDown="buttonFocusRight_PreviewMouseLeftButtonDown"/>
                 <CheckBox x:Name="checkBoxTVK1RESET" Content="Сброс" HorizontalAlignment="Left" Margin="149,32,0,0" VerticalAlignment="Top" RenderTransformOrigin="3.972,1.267" Checked="checkBoxTVK1RESET_Checked" Unchecked="checkBoxTVK1RESET_Unchecked"/>
-                <xctk:DoubleUpDown x:Name="numTVK1ZoomTeleVariableP" Margin="590,110,0,0" Value="4" Text="" Maximum="7" Minimum="0" HorizontalAlignment="Left" Width="41" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" DefaultValue="1" ValueChanged="numTVK1ZoomTeleVariableP_ValueChanged"/>
-                <Label x:Name="labelTVK1ZoomTeleVariableP" Content="Коэффициент Zoom Tele/Wide (variable) p:" HorizontalAlignment="Left" Margin="334,106,0,0" VerticalAlignment="Top" Width="243"/>
-                <xctk:DoubleUpDown x:Name="numTVK1FocusFarNearVariableP" Margin="590,160,0,0" Value="4" Text="" Maximum="7" Minimum="0" HorizontalAlignment="Left" Width="41" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" DefaultValue="1" ValueChanged="numTVK1FocusFarNearVariableP_ValueChanged"/>
-                <Label x:Name="labelTVK1FocusFarNearVariableP" Content="Коэффициент Focus Far/Near (variable) p:" HorizontalAlignment="Left" Margin="334,156,0,0" VerticalAlignment="Top" Width="243"/>
+                <xctk:DoubleUpDown x:Name="numTVK1ZoomTeleVariableP" Margin="629,110,0,0" Value="4" Text="" Maximum="7" Minimum="0" HorizontalAlignment="Left" Width="41" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" DefaultValue="1" ValueChanged="numTVK1ZoomTeleVariableP_ValueChanged"/>
+                <Label x:Name="labelTVK1ZoomTeleVariableP" Content="Коэффициент Zoom Tele/Wide (variable) p:" HorizontalAlignment="Left" Margin="373,106,0,0" VerticalAlignment="Top" Width="243"/>
+                <xctk:DoubleUpDown x:Name="numTVK1FocusFarNearVariableP" Margin="629,160,0,0" Value="4" Text="" Maximum="7" Minimum="0" HorizontalAlignment="Left" Width="41" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" DefaultValue="1" ValueChanged="numTVK1FocusFarNearVariableP_ValueChanged"/>
+                <Label x:Name="labelTVK1FocusFarNearVariableP" Content="Коэффициент Focus Far/Near (variable) p:" HorizontalAlignment="Left" Margin="373,156,0,0" VerticalAlignment="Top" Width="243"/>
+                <Label x:Name="labelTVK1ZOOM_IN_STATE" Content="Состояние:" HorizontalAlignment="Left" Margin="11,135,0,0" VerticalAlignment="Top" Width="69"/>
+                <TextBox x:Name="textBoxTVK1ZOOM_IN_STATE" HorizontalAlignment="Left" Height="23" Margin="88,136,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="54" IsEnabled="False" Background="#FFABADB3"/>
+                <Label x:Name="labelTVK1OCUS_IN_STATE" Content="Состояние:" HorizontalAlignment="Left" Margin="11,201,0,0" VerticalAlignment="Top" Width="73"/>
+                <TextBox x:Name="textBoxTVK1FOCUS_IN_STATE" HorizontalAlignment="Left" Height="23" Margin="89,203,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="54" IsEnabled="False" Background="#FFABADB3"/>
             </Grid>
         </GroupBox>
         <GroupBox x:Name="groupBoxTVK2" Header="ТВК 2" HorizontalAlignment="Left" Margin="1339,40,0,0" Grid.Row="1" VerticalAlignment="Top" Height="486" Width="565">
@@ -190,8 +194,8 @@
                 <CheckBox x:Name="checkBoxTVK2VIDEO_OUT_EN" Content="Вкл/выкл видеопотока" HorizontalAlignment="Left" Margin="12,59,0,0" VerticalAlignment="Top" Checked="checkBoxTVK2VIDEO_OUT_EN_Checked" Width="149" Unchecked="checkBoxTVK2VIDEO_OUT_EN_Unchecked"/>
                 <Label x:Name="labelTVK2READY_IN" Content="Состояние камеры" HorizontalAlignment="Left" Margin="158,26,0,0" VerticalAlignment="Top" Width="118"/>
                 <Label x:Name="labelTVK2VIDEO_OUT_STATE_IN" Content="Сост. передатч. видеоинформации " HorizontalAlignment="Left" Margin="160,55,0,0" VerticalAlignment="Top" Width="208"/>
-                <TextBox x:Name="textBoxTVK2READY_IN" HorizontalAlignment="Left" Height="23" Margin="281,29,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="259"/>
-                <TextBox x:Name="textBoxTVK2VIDEO_OUT_STATE_IN" HorizontalAlignment="Left" Height="23" Margin="373,58,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="167"/>
+                <TextBox x:Name="textBoxTVK2READY_IN" HorizontalAlignment="Left" Height="23" Margin="281,29,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="259" IsEnabled="False" Background="#FFABADB3"/>
+                <TextBox x:Name="textBoxTVK2VIDEO_OUT_STATE_IN" HorizontalAlignment="Left" Height="23" Margin="373,58,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="167" IsEnabled="False" Background="#FFABADB3"/>
             </Grid>
         </GroupBox>
         <GroupBox x:Name="groupBoxTPVK" Header="ТПВК" HorizontalAlignment="Left" Margin="10,622,0,0" Grid.Row="1" VerticalAlignment="Top" Height="338" Width="878">
@@ -199,22 +203,22 @@
                 <Slider x:Name="sliderTPVKGain" HorizontalAlignment="Left" Margin="740,148,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="115" ValueChanged="sliderTPVKGain_ValueChanged" TouchLeave="sliderTPVKGain_TouchLeave" SmallChange="1" AutoToolTipPlacement="TopLeft" Maximum="8" Minimum="1"/>
                 <xctk:DoubleUpDown x:Name="numTPVKGain" Margin="786,172,0,0" Value="1" Increment="1" Text="1" ValueChanged="numTPVKGain_ValueChanged" Maximum="8" Minimum="1" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" DefaultValue="1"/>
                 <Label x:Name="labelTPVKGain" Content="Усиление:" HorizontalAlignment="Left" Margin="664,143,0,0" VerticalAlignment="Top" Width="70"/>
-                <Slider x:Name="sliderTPVKLevel" HorizontalAlignment="Left" Margin="738,195,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="115" ValueChanged="sliderTPVKLevel_ValueChanged" TouchLeave="sliderTPVKLevel_TouchLeave" SmallChange="1" AutoToolTipPlacement="TopLeft" Maximum="8" Minimum="1" Value="30"/>
+                <Slider x:Name="sliderTPVKLevel" HorizontalAlignment="Left" Margin="738,195,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="115" ValueChanged="sliderTPVKLevel_ValueChanged" TouchLeave="sliderTPVKLevel_TouchLeave" SmallChange="1" AutoToolTipPlacement="TopLeft" Maximum="8" Minimum="1" Value="1"/>
                 <xctk:DoubleUpDown x:Name="numTPVKLevel" Margin="785,217,0,0" Value="1" Increment="1" Text="1" ValueChanged="numTPVKLevel_ValueChanged" Maximum="8" Minimum="1" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top"/>
                 <Label x:Name="labelTPVKLevel" Content="Уровень:" HorizontalAlignment="Left" Margin="676,191,0,0" VerticalAlignment="Top" Width="62"/>
                 <Button x:Name="buttonTPVKStateRequest" Content="Опрос состояния" HorizontalAlignment="Left" Margin="742,286,0,0" VerticalAlignment="Top" Width="108" Click="buttonTPVKStateRequest_Click"/>
-                <Grid Margin="186,77,461,198">
-                    <Label x:Name="labelTPVKMode" Content="Режим работы:" HorizontalAlignment="Left" VerticalAlignment="Top" Width="117" Margin="-1,0,0,0"/>
-                    <RadioButton x:Name="radioButtonTPVKModeVkl" Content="Включен" HorizontalAlignment="Left" Margin="92,8,0,0" VerticalAlignment="Top" Checked="radioButtonTPVKModeVkl_Checked"/>
+                <Grid Margin="7,77,640,198">
+                    <Label x:Name="labelTPVKMode" Content="Режим работы:" HorizontalAlignment="Left" VerticalAlignment="Top" Width="117" Margin="-2,0,0,0"/>
+                    <RadioButton x:Name="radioButtonTPVKModeVkl" Content="Включен" HorizontalAlignment="Left" Margin="92,8,0,0" VerticalAlignment="Top" Checked="radioButtonTPVKModeVkl_Checked" IsChecked="True"/>
                     <RadioButton x:Name="radioButtonTPVKModeDejurn" Content="Дежурный режим" HorizontalAlignment="Left" Margin="92,27,0,0" VerticalAlignment="Top" Checked="radioButtonTPVKModeDejurn_Checked"/>
                 </Grid>
-                <Grid Margin="8,74,680,202">
+                <Grid Margin="205,80,462,196">
                     <Label x:Name="labelTVPKContrast" Content="Автоконтраст:" HorizontalAlignment="Left" VerticalAlignment="Top" Width="90" Margin="-5,0,0,0"/>
                     <RadioButton x:Name="radioButtonTPVKContrastRuch" Content="ручной" HorizontalAlignment="Left" Margin="82,8,0,0" VerticalAlignment="Top" Checked="radioButtonTPVKContrastRuch_Checked"/>
-                    <RadioButton x:Name="radioButtonTPVKContrastAuto" Content="автоматический" HorizontalAlignment="Left" Margin="81,26,-19,0" Checked="radioButtonTPVKContrastAuto_Checked"/>
+                    <RadioButton x:Name="radioButtonTPVKContrastAuto" Content="автоматический" HorizontalAlignment="Left" Margin="81,26,-19,0" Checked="radioButtonTPVKContrastAuto_Checked" IsChecked="True"/>
                 </Grid>
-                <Label x:Name="labelTPVKExpositionMode" Content="Режим экспозиции:" HorizontalAlignment="Left" Margin="5,236,0,0" VerticalAlignment="Top" Width="115"/>
-                <ComboBox x:Name="comboBoxTPVKExpositionMode" HorizontalAlignment="Left" Margin="123,240,0,0" VerticalAlignment="Top" Width="120" SelectedIndex="0" IsSynchronizedWithCurrentItem="False" DropDownClosed="comboBoxTPVKExpositionMode_DropDownClosed">
+                <Label x:Name="labelTPVKExpositionMode" Content="Режим экспозиции:" HorizontalAlignment="Left" Margin="5,248,0,0" VerticalAlignment="Top" Width="115"/>
+                <ComboBox x:Name="comboBoxTPVKExpositionMode" HorizontalAlignment="Left" Margin="123,252,0,0" VerticalAlignment="Top" Width="120" SelectedIndex="0" IsSynchronizedWithCurrentItem="False" DropDownClosed="comboBoxTPVKExpositionMode_DropDownClosed">
                     <ComboBoxItem Content="Холодный"/>
                     <ComboBoxItem Content="Теплый"/>
                     <ComboBoxItem Content="Горячий"/>
@@ -224,24 +228,24 @@
                 <xctk:DoubleUpDown x:Name="numTPVKZoom" Margin="787,32,0,0" Value="0" Increment="1" Text="" ValueChanged="numTPVKZoom_ValueChanged" Maximum="48" Minimum="0" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" DefaultValue="1"/>
                 <Grid Margin="390,80,278,195">
                     <Label x:Name="labelTVPKPolarity" Content="Полярность:" HorizontalAlignment="Left" VerticalAlignment="Top" Width="92"/>
-                    <RadioButton x:Name="radioButtonTPVKPolarityWhite" Content="Горячий белый" HorizontalAlignment="Left" Margin="79,9,0,0" VerticalAlignment="Top" Checked="radioButtonTPVKPolarityWhite_Checked"/>
+                    <RadioButton x:Name="radioButtonTPVKPolarityWhite" Content="Горячий белый" HorizontalAlignment="Left" Margin="79,9,0,0" VerticalAlignment="Top" Checked="radioButtonTPVKPolarityWhite_Checked" IsChecked="True"/>
                     <RadioButton x:Name="radioButtonTPVKPolarityBlack" Content="Горячий черный" HorizontalAlignment="Left" Margin="79,27,0,0" VerticalAlignment="Top" Checked="radioButtonTPVKPolarityBlack_Checked"/>
                 </Grid>
-                <CheckBox x:Name="checkBoxTPVKAutoCalibration" Content="Автокалибровка" HorizontalAlignment="Left" Margin="274,287,0,0" VerticalAlignment="Top" Width="120" Unchecked="checkBoxTPVKAutoCalibration_Unchecked" Checked="checkBoxTPVKAutoCalibration_Checked"/>
+                <CheckBox x:Name="checkBoxTPVKAutoCalibration" Content="Автокалибровка" HorizontalAlignment="Left" Margin="274,287,0,0" VerticalAlignment="Top" Width="120" Unchecked="checkBoxTPVKAutoCalibration_Unchecked" Checked="checkBoxTPVKAutoCalibration_Checked" IsChecked="True"/>
                 <Button x:Name="buttonTPVKCalibration" Content="Выполнить калибровку" HorizontalAlignment="Left" Margin="402,284,0,0" VerticalAlignment="Top" Width="138" Click="buttonTPVKCalibration_Click"/>
-                <CheckBox x:Name="checkBoxTPVKAutoexposition" Content="Автоэкспозиция" HorizontalAlignment="Left" Margin="10,214,0,0" VerticalAlignment="Top" Width="152" Unchecked="checkBoxTPVKAutoexposition_Unchecked" Checked="checkBoxTPVKAutoexposition_Checked"/>
+                <CheckBox x:Name="checkBoxTPVKAutoexposition" Content="Автоэкспозиция" HorizontalAlignment="Left" Margin="10,231,0,0" VerticalAlignment="Top" Width="152" Unchecked="checkBoxTPVKAutoexposition_Unchecked" Checked="checkBoxTPVKAutoexposition_Checked" IsChecked="True"/>
                 <Slider x:Name="sliderTPVKFocus" HorizontalAlignment="Left" Margin="740,59,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="115" ValueChanged="sliderTPVKFocus_ValueChanged" SmallChange="1" AutoToolTipPlacement="TopLeft" Maximum="55" LargeChange="0.1" TouchLeave="sliderTPVKFocus_TouchLeave"/>
-                <xctk:DoubleUpDown x:Name="numTPVKFocus" Margin="785,78,0,0" Value="0" Text="0" ValueChanged="numTPVKFocus_ValueChanged" Maximum="55" Minimum="0" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top"/>
+                <xctk:DoubleUpDown x:Name="numTPVKFocus" Margin="785,81,0,0" Value="0" Text="0" ValueChanged="numTPVKFocus_ValueChanged" Maximum="55" Minimum="0" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top"/>
                 <Label x:Name="labelTPVKFocus" Content="Фокусировка:" HorizontalAlignment="Left" Margin="639,54,0,0" VerticalAlignment="Top" Width="93"/>
                 <Label x:Name="labelTPVKDigitalZoom" Content="Увеличение цифровое:" HorizontalAlignment="Left" Margin="592,98,0,0" VerticalAlignment="Top" Width="140"/>
-                <Slider x:Name="sliderTPVKDigitalZoom" HorizontalAlignment="Left" Margin="740,105,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="115" ValueChanged="sliderTPVKDigitalZoom_ValueChanged" TouchLeave="sliderTPVKDigitalZoom_TouchLeave" SmallChange="1" AutoToolTipPlacement="TopLeft" Maximum="4"/>
+                <Slider x:Name="sliderTPVKDigitalZoom" HorizontalAlignment="Left" Margin="740,105,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="115" ValueChanged="sliderTPVKDigitalZoom_ValueChanged" TouchLeave="sliderTPVKDigitalZoom_TouchLeave" SmallChange="1" AutoToolTipPlacement="TopLeft" Maximum="4" Minimum="1" Value="1"/>
                 <xctk:DoubleUpDown x:Name="numTPVKDigitalZoom" Margin="787,123,0,0" Value="1" Increment="1" Text="1" ValueChanged="numTPVKDigitalZoom_ValueChanged" Maximum="4" Minimum="1" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" DefaultValue="1"/>
-                <CheckBox x:Name="checkBoxTPVKImageEnhance" Content="Улучшение изображения" HorizontalAlignment="Left" Margin="190,197,0,0" VerticalAlignment="Top" Width="168" Unchecked="checkBoxTPVKImageEnhance_Unchecked" Checked="checkBoxTPVKImageEnhance_Checked"/>
+                <CheckBox x:Name="checkBoxTPVKImageEnhance" Content="Улучшение изображения" HorizontalAlignment="Left" Margin="186,131,0,0" VerticalAlignment="Top" Width="168" Unchecked="checkBoxTPVKImageEnhance_Unchecked" Checked="checkBoxTPVKImageEnhance_Checked"/>
                 <CheckBox x:Name="checkBoxTPVKInfExchangeONOFF" Content="Вкл/выкл информац. обмена с модулем" HorizontalAlignment="Left" Margin="9,10,0,0" VerticalAlignment="Top" Checked="checkBoxTPVKInfExchangeONOFF_Checked" Unchecked="checkBoxTPVKInfExchangeONOFF_Unchecked"/>
                 <Label x:Name="labelTPVKREADY_IN" Content="Состояние камеры" HorizontalAlignment="Left" Margin="307,4,0,0" VerticalAlignment="Top" Width="118"/>
-                <Label x:Name="cVIDEO_OUT_STATE_IN" Content="Сост. передатч. видеоинформации " HorizontalAlignment="Left" Margin="217,30,0,0" VerticalAlignment="Top" Width="208"/>
-                <TextBox x:Name="textBoxTPVKREADY_IN" HorizontalAlignment="Left" Height="23" Margin="425,6,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="147"/>
-                <TextBox x:Name="textBoxTPVKVIDEO_OUT_STATE_IN" HorizontalAlignment="Left" Height="23" Margin="425,34,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="147"/>
+                <Label x:Name="cVIDEO_OUT_STATE_IN" Content="Сост. передатч. видеоинформации " HorizontalAlignment="Left" Margin="217,53,0,0" VerticalAlignment="Top" Width="208"/>
+                <TextBox x:Name="textBoxTPVKREADY_IN" HorizontalAlignment="Left" Height="23" Margin="425,5,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="147" IsEnabled="False" Background="#FFABADB3"/>
+                <TextBox x:Name="textBoxTPVKVIDEO_OUT_STATE_IN" HorizontalAlignment="Left" Height="23" Margin="425,57,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="147" IsEnabled="False" Background="#FFABADB3"/>
                 <CheckBox x:Name="checkBoxTPVKVIDEO_OUT_EN" Content="Вкл/выкл видеопотока" HorizontalAlignment="Left" Margin="9,50,0,0" VerticalAlignment="Top" Checked="checkBoxTPVKVIDEO_OUT_EN_Checked_1" Width="149" Unchecked="checkBoxTPVKVIDEO_OUT_EN_Unchecked_2"/>
                 <CheckBox x:Name="checkBoxTPVKONOFF" Content="Вкл/выкл" HorizontalAlignment="Left" Margin="9,30,0,0" VerticalAlignment="Top" Checked="checkBoxTPVKONOFF_Checked_1" Unchecked="checkBoxTPVKONOFF_Unchecked_1"/>
                 <Grid Margin="22,120,646,120">
@@ -249,18 +253,34 @@
                         <ColumnDefinition Width="117*"/>
                         <ColumnDefinition Width="73*"/>
                     </Grid.ColumnDefinitions>
-                    <Label x:Name="labelTVPKMark" Content="Марка" HorizontalAlignment="Left" VerticalAlignment="Top" Width="48" Margin="18,-2,0,0"/>
-                    <RadioButton x:Name="radioButtonTPVKMarkOff" Content="Выключена" HorizontalAlignment="Left" Margin="67,7,0,0" VerticalAlignment="Top" Grid.ColumnSpan="2" Checked="radioButtonTPVKMarkOff_Checked"/>
-                    <RadioButton x:Name="radioButtonTPVKMarkBlack" Content="Черная" HorizontalAlignment="Left" Margin="67,25,0,0" VerticalAlignment="Top" Checked="radioButtonTPVKMarkBlack_Checked" Grid.ColumnSpan="2"/>
-                    <RadioButton x:Name="radioButtonTPVKMarkGray" Content="Серая" HorizontalAlignment="Left" Margin="67,42,0,0" VerticalAlignment="Top" Checked="radioButtonTPVKMarkGray_Checked" Grid.ColumnSpan="2"/>
-                    <RadioButton x:Name="radioButtonTPVKMarkWhite" Content="Белая" HorizontalAlignment="Left" Margin="67,60,0,0" VerticalAlignment="Top" Checked="radioButtonTPVKMarkWhite_Checked" Grid.ColumnSpan="2"/>
+                    <Label x:Name="labelTVPKMark" Content="Марка" HorizontalAlignment="Left" VerticalAlignment="Top" Width="48" Margin="-15,-2,0,0"/>
+                    <RadioButton x:Name="radioButtonTPVKMarkOff" Content="Выключена" HorizontalAlignment="Left" Margin="34,7,0,0" VerticalAlignment="Top" Checked="radioButtonTPVKMarkOff_Checked" IsChecked="True"/>
+                    <RadioButton x:Name="radioButtonTPVKMarkBlack" Content="Черная" HorizontalAlignment="Left" Margin="34,25,0,0" VerticalAlignment="Top" Checked="radioButtonTPVKMarkBlack_Checked"/>
+                    <RadioButton x:Name="radioButtonTPVKMarkGray" Content="Серая" HorizontalAlignment="Left" Margin="34,42,0,0" VerticalAlignment="Top" Checked="radioButtonTPVKMarkGray_Checked"/>
+                    <RadioButton x:Name="radioButtonTPVKMarkWhite" Content="Белая" HorizontalAlignment="Left" Margin="34,60,0,0" VerticalAlignment="Top" Checked="radioButtonTPVKMarkWhite_Checked"/>
                 </Grid>
-                <Slider x:Name="sliderTPVKEnhancementEdge" HorizontalAlignment="Left" Margin="499,174,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="114" ValueChanged="sliderTPVKEnhancementEdge_ValueChanged" TouchLeave="sliderTPVKEnhancementEdge_TouchLeave" SmallChange="1" AutoToolTipPlacement="TopLeft" Maximum="7"/>
-                <Label x:Name="labelTPVKEnhancementEdge" Content="Улучшение по краям:" HorizontalAlignment="Left" Margin="363,169,0,0" VerticalAlignment="Top" Width="130"/>
-                <Slider x:Name="sliderTPVKEnhancementContrastModes" HorizontalAlignment="Left" Margin="499,222,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="114" ValueChanged="sliderTPVKEnhancementContrastModes_ValueChanged" TouchLeave="sliderTPVKEnhancementContrastModes_TouchLeave" SmallChange="1" AutoToolTipPlacement="TopLeft" Maximum="7"/>
-                <Label x:Name="labelTPVKEnhancementContrastModes" Content="Режимы контраста:" HorizontalAlignment="Left" Margin="363,217,0,0" VerticalAlignment="Top" Width="130"/>
-                <xctk:DoubleUpDown x:Name="numTPVKEnhancementEdge" Margin="543,193,0,0" Value="0" Increment="1" Text="0" ValueChanged="numTPVKEnhancementEdge_ValueChanged" Maximum="7" Minimum="0" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" DefaultValue="1"/>
-                <xctk:DoubleUpDown x:Name="numTPVKEnhancementContrastModes" Margin="543,241,0,0" Value="0" Increment="1" Text="0" ValueChanged="numTPVKEnhancementContrastModes_ValueChanged" Maximum="7" Minimum="0" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" DefaultValue="1"/>
+                <Slider x:Name="sliderTPVKEnhancementEdge" HorizontalAlignment="Left" Margin="499,132,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="114" ValueChanged="sliderTPVKEnhancementEdge_ValueChanged" TouchLeave="sliderTPVKEnhancementEdge_TouchLeave" SmallChange="1" AutoToolTipPlacement="TopLeft" Maximum="7"/>
+                <Label x:Name="labelTPVKEnhancementEdge" Content="Улучшение по краям:" HorizontalAlignment="Left" Margin="363,127,0,0" VerticalAlignment="Top" Width="130"/>
+                <Slider x:Name="sliderTPVKEnhancementContrastModes" HorizontalAlignment="Left" Margin="499,188,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="114" ValueChanged="sliderTPVKEnhancementContrastModes_ValueChanged" TouchLeave="sliderTPVKEnhancementContrastModes_TouchLeave" SmallChange="1" AutoToolTipPlacement="TopLeft" Maximum="7"/>
+                <Label x:Name="labelTPVKEnhancementContrastModes" Content="Режим контраста:" HorizontalAlignment="Left" Margin="363,183,0,0" VerticalAlignment="Top" Width="130"/>
+                <xctk:DoubleUpDown x:Name="numTPVKEnhancementEdge" Margin="543,160,0,0" Value="0" Increment="1" Text="0" ValueChanged="numTPVKEnhancementEdge_ValueChanged" Maximum="7" Minimum="0" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" DefaultValue="1"/>
+                <xctk:DoubleUpDown x:Name="numTPVKEnhancementContrastModes" Margin="543,214,0,0" Value="0" Increment="1" Text="0" ValueChanged="numTPVKEnhancementContrastModes_ValueChanged" Maximum="7" Minimum="0" HorizontalAlignment="Left" Width="64" RenderTransformOrigin="0.438,1.6" VerticalAlignment="Top" DefaultValue="1"/>
+                <TextBox x:Name="textBoxTPVKZOOM_IN" HorizontalAlignment="Left" Height="21" Margin="699,31,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="54" IsEnabled="False" Background="#FFABADB3"/>
+                <TextBox x:Name="textBoxTPVKFOCUS_IN" HorizontalAlignment="Left" Height="21" Margin="700,80,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="54" IsEnabled="False" Background="#FFABADB3"/>
+                <TextBox x:Name="textBoxTPVKEXPOSURE_IN" HorizontalAlignment="Left" Height="21" Margin="123,281,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="120" IsEnabled="False" Background="#FFABADB3"/>
+                <TextBox x:Name="textBoxTPVKGAIN_IN" HorizontalAlignment="Left" Height="21" Margin="700,171,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="54" IsEnabled="False" Background="#FFABADB3"/>
+                <TextBox x:Name="textBoxTPVKLEVEL_IN" HorizontalAlignment="Left" Height="21" Margin="700,216,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="54" IsEnabled="False" Background="#FFABADB3"/>
+                <Label x:Name="labelTPVKPOWER_STATE_IN" Content="Состояние питания камеры" HorizontalAlignment="Left" Margin="259,29,0,0" VerticalAlignment="Top" Width="166"/>
+                <TextBox x:Name="textBoxTPVKPOWER_STATE_IN" HorizontalAlignment="Left" Height="23" Margin="425,31,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="147" IsEnabled="False" Background="#FFABADB3"/>
+                <TextBox x:Name="textBoxTPVKENHANCE_IN" HorizontalAlignment="Left" Height="23" Margin="330,158,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="183" IsEnabled="False" Background="#FFABADB3"/>
+                <Label x:Name="labelTPVKzoomState" Content="Состояние:" HorizontalAlignment="Left" Margin="627,28,0,0" VerticalAlignment="Top" Width="70"/>
+                <Label x:Name="labelTPVKFocusState" Content="Состояние:" HorizontalAlignment="Left" Margin="630,77,0,0" VerticalAlignment="Top" Width="70"/>
+                <Label x:Name="labelTPVKGainState" Content="Состояние:" HorizontalAlignment="Left" Margin="630,169,0,0" VerticalAlignment="Top" Width="70"/>
+                <Label x:Name="labelTPVKLevelState" Content="Состояние:" HorizontalAlignment="Left" Margin="630,213,0,0" VerticalAlignment="Top" Width="70"/>
+                <Label x:Name="labelTPVKEnhancementEdgeState_IN" Content="Состояние улучшения по краям:" HorizontalAlignment="Left" Margin="135,158,0,0" VerticalAlignment="Top" Width="190"/>
+                <Label x:Name="labelTPVKzoomState_Copy4" Content="Состояние:" HorizontalAlignment="Left" Margin="48,278,0,0" VerticalAlignment="Top" Width="70"/>
+                <TextBox x:Name="textBoxTPVKnhancementContrastModesState_IN" HorizontalAlignment="Left" Height="23" Margin="330,212,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="183" IsEnabled="False" Background="#FFABADB3"/>
+                <Label x:Name="labelTPVKEnhancementContrastModesState_IN" Content="Состояние режима контраста:" HorizontalAlignment="Left" Margin="147,212,0,0" VerticalAlignment="Top" Width="176"/>
             </Grid>
         </GroupBox>
         <GroupBox x:Name="groupBoxLD" Header="ЛД" HorizontalAlignment="Left" Margin="884,40,0,0" Grid.Row="1" VerticalAlignment="Top" Height="582" Width="446">
@@ -285,7 +305,7 @@
                 <Label x:Name="labelLDBrightnessLIghtFPU" Content="Яркость подсветки выверки ФПУ:" HorizontalAlignment="Left" Margin="50,220,0,0" VerticalAlignment="Top" Width="195"/>
                 <CheckBox x:Name="checkBoxLDInfExchangeONOFF" Content="Вкл/выкл информац. обмена с модулем" HorizontalAlignment="Left" Margin="10,4,0,0" VerticalAlignment="Top" Unchecked="checkBoxLDONOFF_Unchecked" Checked="checkBoxmLDInfExchangeONOFF"/>
                 <Label x:Name="labelLDSOST_IN" Content="Состояние дальномера" HorizontalAlignment="Left" Margin="98,21,0,0" VerticalAlignment="Top" Width="149"/>
-                <TextBox x:Name="textBoxLDSOST_IN" HorizontalAlignment="Left" Height="23" Margin="243,22,0,0" VerticalAlignment="Top" Width="173" Grid.ColumnSpan="2" MaxLines="1" AcceptsReturn="False"/>
+                <TextBox x:Name="textBoxLDSOST_IN" HorizontalAlignment="Left" Height="23" Margin="243,22,0,0" VerticalAlignment="Top" Width="173" Grid.ColumnSpan="2" MaxLines="1" AcceptsReturn="False" IsEnabled="False" Background="#FFABADB3"/>
                 <DataGrid x:Name="dataGridLDTargetsDistances" HorizontalAlignment="Left" Margin="17,371,0,0" VerticalAlignment="Top" Width="390" Height="169" Grid.ColumnSpan="2" Loaded="dataGridLDTargetsDistances_Loaded"/>
                 <Label x:Name="labelLDTableTargetsDist" Content="Массив дальностей до целей" HorizontalAlignment="Left" Margin="17,347,0,0" VerticalAlignment="Top" Width="234"/>
                 <Slider x:Name="sliderLDStrob" HorizontalAlignment="Left" Margin="250,267,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.167,-1.167" Width="114" ValueChanged="sliderLDStrob_ValueChanged" TouchLeave="sliderLDStrob_TouchLeave" SmallChange="1" AutoToolTipPlacement="TopLeft" Grid.ColumnSpan="2"/>

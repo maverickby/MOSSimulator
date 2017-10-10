@@ -187,10 +187,28 @@ namespace MOSSimulator
         bool TPVKZoomPacketsSeries;//признак пакета 3х зума
         int TPVKZoomMeditVal;//промежуточное значение при посылке 3х пакета зума
 
+        int TPVKFocusPrev;//предыдущее значение фокуса
+        int TPVKFocus3Count;//счетчик пакетов при посылке 3х пакета фокуса
+        bool TPVKFocusPacketsSeries;//признак пакета 3х фокуса
+        int TPVKFocusMeditVal;//промежуточное значение при посылке 3х пакета фокуса
+
         bool TPVKCalibrationEngaged;//признак калибровки
         int TPVKCalibration3Count;//счетчик пакетов при посылке 3х пакета калибровки
         bool TPVKCalibrationPacketsSeries;//признак пакета 3х калибровки
         byte TPVKCalibrationMeditVal;//промежуточное значение при посылке 3х пакета калибровки
+        int TPVKZoom_IN;
+        int TPVKFocus_IN;
+        int TPVKExposure_IN;
+
+        int TVK1ZoomPrev;//предыдущее значение зума
+        int TVK1Zoom3Count;//счетчик пакетов при посылке 3х пакета зума
+        bool TVK1ZoomPacketsSeries;//признак пакета 3х зума
+        int TVK1ZoomMeditVal;//промежуточное значение при посылке 3х пакета зума
+
+        int TVK1FocusPrev;//предыдущее значение фокуса
+        int TVK1Focus3Count;//счетчик пакетов при посылке 3х пакета фокуса
+        bool TVK1FocusPacketsSeries;//признак пакета 3х фокуса
+        int TVK1FocusMeditVal;//промежуточное значение при посылке 3х пакета фокуса
 
         public int JoystickZoneInsensibilityY
         {
@@ -356,7 +374,11 @@ namespace MOSSimulator
             numTPVKGain.IsEnabled = false;
             sliderTPVKLevel.IsEnabled = false;
             numTPVKLevel.IsEnabled = false;
-            comboBoxTPVKExpositionMode.IsEnabled = true;
+            comboBoxTPVKExpositionMode.IsEnabled = false;
+            sliderTPVKEnhancementEdge.IsEnabled = false;
+            numTPVKEnhancementEdge.IsEnabled = false;
+            sliderTPVKEnhancementContrastModes.IsEnabled = false;
+            numTPVKEnhancementContrastModes.IsEnabled = false;
         }
         private void Log_Click(object sender, RoutedEventArgs e)
         {
@@ -1147,7 +1169,9 @@ namespace MOSSimulator
 
                         strStatusTVK1 += TVK1AutoFocus;
                         strStatusTVK1 += "Zoom Position: " + Convert.ToString(TVK1ZoomPosition) + "\n";
+                        textBoxTVK1ZOOM_IN_STATE.Text = Convert.ToString(TVK1ZoomPosition);
                         strStatusTVK1 += "Focus Position: " + Convert.ToString(TVK1FocusPosition) + "\n";
+                        textBoxTVK1FOCUS_IN_STATE.Text = Convert.ToString(TVK1FocusPosition);
                         if (tvk1StatusWindow != null)
                             tvk1StatusWindow.fillData(strStatusTVK1);
                     }));
@@ -1389,7 +1413,9 @@ namespace MOSSimulator
                         tvk2StatusWindow.fillData(strStatusTVK2);
                     }));
                     setTagUartReceived(true);
-                }
+                    if (tvk2StatusWindow != null)
+                        Thread.Sleep(10);//для недопущения подвисания в окне состояния 
+            }
                 //ТПВК
                 if (TPVKInfExchangeONOFF && cycleIndex == 5)
                 {
@@ -1399,32 +1425,190 @@ namespace MOSSimulator
                         return;
                     }
                     string strStatusTPVK = "";
-                    //состояние READY
+                    
                     byte[] byteArr = new byte[1];
                     byte[] byteArr2 = new byte[1];
-                    byteArr[0] = com_in.DATA[2];
-                    byteArr2[0] = com_in.DATA[3];
+                    //состояние READY
+                    byte[] byteArr3 = new byte[1];
+                    byte[] byteArr4 = new byte[1];
+                    byte[] byteArr56 = new byte[2];
+                    byte[] byteArr78 = new byte[2];
+                    byte[] byteArr9 = new byte[2];
+                    byte[] byteArr10 = new byte[2];
+                    byte[] byteArr11 = new byte[2];
+                    byte[] byteArr12 = new byte[2];
+                    byte[] byteArr13 = new byte[1];
+
+                    byteArr[0] = com_in.DATA[0];
+                    byteArr2[0] = com_in.DATA[1];
+                    byteArr3[0] = com_in.DATA[2];
+                    byteArr4[0] = com_in.DATA[3];
+                    byteArr56[0] = com_in.DATA[4];
+                    byteArr56[1] = com_in.DATA[5];
+                    byteArr78[0] = com_in.DATA[6];
+                    byteArr78[1] = com_in.DATA[7];
+                    byteArr9[0] = com_in.DATA[8];
+                    byteArr10[0] = com_in.DATA[9];                    
+                    byteArr11[0] = com_in.DATA[10];
+                    byteArr12[0] = com_in.DATA[11];
+                    byteArr13[0] = com_in.DATA[12];
 
                     BitArray bitArray = new BitArray(byteArr);
                     BitArray bitArray2 = new BitArray(byteArr2);
+                    BitArray bitArray3 = new BitArray(byteArr3);
+                    BitArray bitArray4 = new BitArray(byteArr4);
+                    BitArray bitArray11 = new BitArray(byteArr11);
+                    BitArray bitArray12 = new BitArray(byteArr12);
+                    BitArray bitArray13 = new BitArray(byteArr13);
+
 
                     Dispatcher.BeginInvoke(new Action(delegate
                     {
+                        strStatusTPVK = "";
                         textBoxTPVKREADY_IN.Text = "";
-                        if (!bitArray.Get(0))
-                            textBoxTPVKREADY_IN.Text += "Питание отключено\n";
-                        else
-                            textBoxTPVKREADY_IN.Text += "Питание включено\n";
-                        if (!bitArray.Get(2))
-                            textBoxTPVKREADY_IN.Text += "Данные не передаются\n";
-                        else
-                            textBoxTPVKREADY_IN.Text += "Данные передаются\n";
+                        textBoxTPVKPOWER_STATE_IN.Text = "";
+                        textBoxTPVKVIDEO_OUT_STATE_IN.Text = "";
+                        textBoxTPVKZOOM_IN.Text = "";
+                        textBoxTPVKFOCUS_IN.Text = "";
+                        textBoxTPVKGAIN_IN.Text = "";
+                        textBoxTPVKLEVEL_IN.Text = "";
+                        textBoxTPVKENHANCE_IN.Text = "";
+                        textBoxTPVKEXPOSURE_IN.Text = "";                 
                         
+                        if (!bitArray3.Get(0))
+                            textBoxTPVKREADY_IN.Text = "Питание отключено\n";
+                        else
+                            textBoxTPVKREADY_IN.Text = "Питание включено\n";
+                        if (!bitArray.Get(0))
+                            textBoxTPVKPOWER_STATE_IN.Text = "Питание отключено\n";
+                        else
+                            textBoxTPVKPOWER_STATE_IN.Text = "Питание включено\n";
+                        if (!bitArray.Get(2))
+                            textBoxTPVKVIDEO_OUT_STATE_IN.Text = "Данные не передаются\n";
+                        else
+                            textBoxTPVKVIDEO_OUT_STATE_IN.Text = "Данные передаются\n";
+
+                        TPVKFocus_IN = BitConverter.ToInt16(byteArr10, 0);
+                        textBoxTPVKFOCUS_IN.Text = TPVKFocus_IN.ToString();
+                        TPVKZoom_IN = BitConverter.ToInt16(byteArr11, 0);
+                        textBoxTPVKZOOM_IN.Text = TPVKZoom_IN.ToString();
+
+                        TPVKExposure_IN = BitConverter.ToInt16(byteArr9, 0);
+                        if(TPVKExposure_IN==0)
+                            textBoxTPVKEXPOSURE_IN.Text = "Холодный режим";
+                        if (TPVKExposure_IN == 1)
+                            textBoxTPVKEXPOSURE_IN.Text = "Теплый режим";
+                        if (TPVKExposure_IN == 2)
+                            textBoxTPVKEXPOSURE_IN.Text = "Горячий режим";
+
+                        textBoxTPVKGAIN_IN.Text = (BitConverter.ToInt16(byteArr78, 0)).ToString();
+                        textBoxTPVKLEVEL_IN.Text = (BitConverter.ToInt16(byteArr56, 0)).ToString();
+
+                        if (!bitArray.Get(1))
+                            strStatusTPVK += "Состояние приемника видеоинформации от камеры ТПВ: " + "данные не принимаются\n";
+                        else
+                            strStatusTPVK += "Состояние приемника видеоинформации от камеры ТПВ: " + "данные принимаются\n";
+                        if (!bitArray.Get(3))
+                            strStatusTPVK += "Состояние канала управления камерой ТПВ: " + "нет связи\n";
+                        else
+                            strStatusTPVK += "Состояние канала управления камерой ТПВ: " + "есть связь\n";
+
+                        if (!bitArray2.Get(0))
+                            strStatusTPVK += "Текущий режим работы: " + "Standby mode (low consumption)\n";
+                        else
+                            strStatusTPVK += "Текущий режим работы: " + "Operational mode\n";
+                        if (!bitArray2.Get(1))
+                            strStatusTPVK += "Текущая полярность: " + "WHITE HOT\n";
+                        else
+                            strStatusTPVK += "Текущая полярность: " + "BLACK HOT\n";
+                        if (!bitArray2.Get(5))
+                            strStatusTPVK += "Состояние калибровки: " + "нормальная работа камеры\n";
+                        else
+                            strStatusTPVK += "Состояние калибровки: " + "камера находится в режиме калибровки\n";
+
+                        if (!bitArray2.Get(6))
+                            strStatusTPVK += "Текущий источник синхронизации: " + "внутренний генератор камеры\n";
+                        else
+                            strStatusTPVK += "Текущий источник синхронизации: " + "внешний сигнал\n";
+                        if (!bitArray2.Get(7))
+                            strStatusTPVK += "Текущее состояние автоматической калибровки: " + "отключена\n";
+                        else
+                            strStatusTPVK += "Текущее состояние автоматической калибровки: " + "интервалы проведения калибровки выбираются камерой\n";
+
+                        if (!bitArray3.Get(1))
+                            strStatusTPVK += "Текущее состояние механизма увеличения: " + "механизм неподвижен\n";
+                        else
+                            strStatusTPVK += "Текущее состояние механизма увеличения: " + "механизм изменяет положение\n";
+                        if (!bitArray3.Get(2))
+                            strStatusTPVK += "Текущее состояние механизма фокусировки: " + "механизм неподвижен\n";
+                        else
+                            strStatusTPVK += "Текущее состояние механизма фокусировки: " + "механизм изменяет положение\n";
+                        if (!bitArray3.Get(2))
+                            strStatusTPVK += "Текущее состояние охладителя: " + "охладитель находится в режиме выхода на рабочую температуру или режиме Standby\n";
+                        else
+                            strStatusTPVK += "Текущее состояние охладителя: " + "рабочая температура достигнута, охладитель находится в режиме поддержания рабочей температуры\n";
+
+                        if (!bitArray4.Get(2) && !bitArray4.Get(3))
+                            strStatusTPVK += "Текущее состояние прицельной марки: " + "выключена\n";
+                        if (!bitArray4.Get(2) && bitArray4.Get(3))
+                            strStatusTPVK += "Текущее состояние прицельной марки: " + "чернаяа \n";
+                        if (bitArray4.Get(2) && !bitArray4.Get(3))
+                            strStatusTPVK += "Текущее состояние прицельной марки: " + "серая \n";
+                        if (bitArray4.Get(2) && bitArray4.Get(3))
+                            strStatusTPVK += "Текущее состояние прицельной марки: " + "белая \n";
+
+                        if (!bitArray4.Get(6))
+                            strStatusTPVK += "Текущий режим автоматического выбора времени накопления сенсора: " + "выключен\n";
+                        else
+                            strStatusTPVK += "Текущий режим автоматического выбора времени накопления сенсора: " + "включен\n";
+
+                        if (BitConverter.ToInt16(byteArr12, 0) ==0)
+                        {
+                            strStatusTPVK += "Текущее значение уровня улучшения изображения: " + "улучшение отключено\n";
+                            textBoxTPVKENHANCE_IN.Text= "улучшение отключено";
+                        }
+                        if (BitConverter.ToInt16(byteArr12, 0) == 1)
+                        {
+                            strStatusTPVK += "Текущее значение уровня улучшения изображения: " + "минимальное улучшение изображения\n";
+                            textBoxTPVKENHANCE_IN.Text = "минимальное улучшение изображения";
+                        }
+                        if (bitArray12.Get(0) && bitArray12.Get(1) && bitArray12.Get(2) && bitArray12.Get(3))
+                        {
+                            strStatusTPVK += "Текущее значение уровня улучшения изображения: " + "максимальное улучшение изображения\n";
+                            textBoxTPVKENHANCE_IN.Text = "максимальное улучшение изображения";
+                        }
+
+                        if (bitArray12.Get(0) && !bitArray12.Get(4) && !bitArray12.Get(5) && !bitArray12.Get(6))
+                        {
+                            strStatusTPVK += "Режим контраста: режим малого контраста\n";
+                            textBoxTPVKnhancementContrastModesState_IN.Text = "режим малого контраста";
+                        }
+                        if (bitArray12.Get(0) && bitArray12.Get(4) && bitArray12.Get(5) && bitArray12.Get(6))
+                        {
+                            strStatusTPVK += "Режим контраста: режим высокого контраста\n";
+                            textBoxTPVKnhancementContrastModesState_IN.Text = "режим высокого контраста";
+                        }
+
+                        
+
+                        if (!bitArray13.Get(0))
+                            strStatusTPVK += "Признак ошибки механизма увеличения: " + "механизм работает нормально\n";
+                        else
+                            strStatusTPVK += "Признак ошибки механизма увеличения: " + "обнаружена ошибка в работе механизма\n";
+                        if (!bitArray13.Get(1))
+                            strStatusTPVK += "Признак ошибки механизма фокусировки: " + "механизм работает нормально\n";
+                        else
+                            strStatusTPVK += "Признак ошибки механизма фокусировки: " + "обнаружена ошибка в работе механизма\n";
+
+
                         if (tpvkStatusWindow != null)
                             tpvkStatusWindow.fillData(strStatusTPVK);
                     }));
                     setTagUartReceived(true);
-                }
+                    if (tpvkStatusWindow != null)
+                        Thread.Sleep(10);//для недопущения подвисания в окне состояния               
+            }
+
                 //ЛД
                 if (LDInfExchangeONOFF && cycleIndex == 7)
                 {
@@ -2872,6 +3056,7 @@ namespace MOSSimulator
             camAutoFocusSend = false;
 
             TVK1DataChanged = true;
+            //sliderTVK1Zoom.Value+=100;
             ControlChanged(sender, e);
         }
 
@@ -2889,6 +3074,7 @@ namespace MOSSimulator
             camAutoFocusSend = false;            
 
             TVK1DataChanged = true;
+            //sliderTVK1Zoom.Value -= 1;
             ControlChanged(sender, e);
         }
 
@@ -2924,8 +3110,8 @@ namespace MOSSimulator
 
         private void buttonFocusRight_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            camFocusFarVariableSend = true;
-            camFocusNearVariableSend = false;
+            camFocusFarVariableSend = false;
+            camFocusNearVariableSend = true;
             camFocusStopSend = false;
             camFocusDirectSend = false;
             camAutoFocusSend = false;
@@ -2941,8 +3127,8 @@ namespace MOSSimulator
 
         private void buttonFocusLeft_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            camFocusFarVariableSend = false;
-            camFocusNearVariableSend = true;
+            camFocusFarVariableSend = true;
+            camFocusNearVariableSend = false;
             camFocusStopSend = false;
             camFocusDirectSend = false;
             camAutoFocusSend = false;
@@ -3159,11 +3345,19 @@ namespace MOSSimulator
 
         private void checkBoxTPVKImageEnhance_Unchecked(object sender, RoutedEventArgs e)
         {
+            sliderTPVKEnhancementEdge.IsEnabled = false;
+            numTPVKEnhancementEdge.IsEnabled = false;
+            sliderTPVKEnhancementContrastModes.IsEnabled = false;
+            numTPVKEnhancementContrastModes.IsEnabled = false;
             ControlChanged(sender, e);
         }
 
         private void checkBoxTPVKImageEnhance_Checked(object sender, RoutedEventArgs e)
         {
+            sliderTPVKEnhancementEdge.IsEnabled = true;
+            numTPVKEnhancementEdge.IsEnabled = true;
+            sliderTPVKEnhancementContrastModes.IsEnabled = true;
+            numTPVKEnhancementContrastModes.IsEnabled = true;
             ControlChanged(sender, e);
         }
 
@@ -3481,7 +3675,8 @@ namespace MOSSimulator
 
         private void sliderTPVKDigitalZoom_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            numTPVKDigitalZoom.Value = (int)sliderTPVKDigitalZoom.Value;
+            if (numTPVKDigitalZoom != null)
+                numTPVKDigitalZoom.Value = (int)sliderTPVKDigitalZoom.Value;
             ControlChanged(sender, e);
         }
 
@@ -3918,6 +4113,41 @@ namespace MOSSimulator
                          CinZoomPosInq = Cin;
                     }
 
+                    ///////////////////////////////////////////////////
+                    if (numTVK1ZoomVal != TVK1ZoomPosition)//если устанавливаемое значение не совпадает с принятым - послать серию пакетов 3х
+                    {
+                        TVK1ZoomPacketsSeries = true;
+                        TVK1ZoomMeditVal = numTVK1ZoomVal;//промежуточное значение зума при посылке 3х пакетов
+                    }
+                    //послать 3х пакета для Zoom
+                    if (TVK1ZoomPrev != numTVK1ZoomVal && !TVK1ZoomPacketsSeries)//если изменение зума и НЕТ серии пакетов 3х
+                    {
+                        TVK1ZoomPacketsSeries = true;
+                        TVK1ZoomMeditVal = numTVK1ZoomVal;//промежуточное значение зума при посылке 3х пакетов                        
+                    }
+                    //if (TVK1ZoomPrev == numTVK1ZoomVal && !TVK1ZoomPacketsSeries)//посылка 0 при одинаковых значениях и(или) окончании пакета 3х
+                    //{
+                    //    comTVK1.DATA[9] = 0;
+                    //}
+
+                    if (TVK1ZoomPacketsSeries)//пакет 3х
+                    {
+                        if (TVK1Zoom3Count > 2)
+                        {
+                            TVK1ZoomPrev = TVK1ZoomMeditVal;
+                            TVK1ZoomPacketsSeries = false;
+                            TVK1Zoom3Count = 0;
+                        }
+                        else
+                        {
+                            //comTVK1.DATA[9] = (byte)TVK1ZoomMeditVal;//посылка 3х пакета
+                            camZoomDirectSend = true;//посылка 3х пакета
+                            TVK1DataChanged = true;
+                            TVK1Zoom3Count++;
+                        }
+                    }
+                    ///////////////////////////////
+
                     if (CAM_FocusPosInq)//послать запрос на получение значения фокуса
                     {
                         if (TVK1DataChanged)
@@ -4066,6 +4296,35 @@ namespace MOSSimulator
                          camFocusDirectSend = false;//сбросить признак, посылать пакет только 1 раз
                          CinFocusPosInq = Cin-1;
                     }
+                    ///////////////////////////////////////////////////
+                    if (numTVK1FocusVal != TVK1FocusPosition)//если устанавливаемое значение не совпадает с принятым - послать серию пакетов 3х
+                    {
+                        TVK1FocusPacketsSeries = true;
+                        TVK1FocusMeditVal = numTVK1FocusVal;//промежуточное значение фокуса при посылке 3х пакетов
+                    }
+                    //послать 3х пакета для Focus
+                    if (TVK1FocusPrev != numTVK1FocusVal && !TVK1FocusPacketsSeries)//если изменение фокуса и НЕТ серии пакетов 3х
+                    {
+                        TVK1FocusPacketsSeries = true;
+                        TVK1FocusMeditVal = numTVK1FocusVal;//промежуточное значение фокуса при посылке 3х пакетов                        
+                    }
+                    if (TVK1FocusPacketsSeries)//пакет 3х
+                    {
+                        if (TVK1Focus3Count > 2)
+                        {
+                            TVK1FocusPrev = TVK1FocusMeditVal;
+                            TVK1FocusPacketsSeries = false;
+                            TVK1Focus3Count = 0;
+                        }
+                        else
+                        {
+                            //comTVK1.DATA[9] = (byte)TVK1FocusMeditVal;//посылка 3х пакета
+                            camFocusDirectSend = true;//посылка 3х пакета
+                            TVK1DataChanged = true;
+                            TVK1Focus3Count++;
+                        }
+                    }
+                    ///////////////////////////////
                     if (CAM_FocusModeInq)//послать запрос на получение значения режима фокуса
                     {
                         if (TVK1DataChanged)
@@ -4434,7 +4693,7 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                     BitArray bitArray2 = new BitArray(8);
                     bitArray2.SetAll(false);
 
-                    //comTPVK.DATA[1] = st_outTPVK.MODE_POLARITY_AUTO_CONTRAST_V_READOUT_H_READOUT_CALIBRATION_SYNC_SOURCE_AUTO_CALIBRATION;
+                    comTPVK.DATA[1] = st_outTPVK.MODE_POLARITY_AUTO_CONTRAST_V_READOUT_H_READOUT_CALIBRATION_SYNC_SOURCE_AUTO_CALIBRATION;
 
                     ///////////////////////////////////////////////////
                     //послать 3х пакета для Калибровки
@@ -4444,7 +4703,7 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                         //промежуточное значение калибровки при посылке 3х пакетов                        
                         TPVKCalibrationMeditVal = st_outTPVK.MODE_POLARITY_AUTO_CONTRAST_V_READOUT_H_READOUT_CALIBRATION_SYNC_SOURCE_AUTO_CALIBRATION;
                     }
-                    if (!TPVKCalibrationEngaged && !TPVKZoomPacketsSeries)//посылка 0 отсутствии калибровки (TPVKCalibrationEngaged==false) и(или) окончании пакета 3х
+                    if (!TPVKCalibrationEngaged && !TPVKZoomPacketsSeries)//посылка 0 при отсутствии калибровки (TPVKCalibrationEngaged==false) и(или) окончании пакета 3х
                     {
                         byte[] myBytes = new byte[1];
                         myBytes[0] = st_outTPVK.MODE_POLARITY_AUTO_CONTRAST_V_READOUT_H_READOUT_CALIBRATION_SYNC_SOURCE_AUTO_CALIBRATION;
@@ -4458,6 +4717,7 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                         if (TPVKCalibration3Count > 2)
                         {
                             TPVKCalibrationPacketsSeries = false;
+                            TPVKCalibrationEngaged = false;
                             TPVKCalibration3Count = 0;
                         }
                         else
@@ -4468,22 +4728,61 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
                     }
                     ///////////////////////////////
 
-                    if (TPVKCalibrationEngaged)
-                        TPVKCalibrationEngaged = false;
+                    //if (TPVKCalibrationEngaged)
+                    //    TPVKCalibrationEngaged = false;
 
                     comTPVK.DATA[2] = st_outTPVK.IMAGE_POSITION_LAYING_MARK_DIGITAL_ZOOM_AUTO_EXPOSURE;
 
                     byteArray = BitConverter.GetBytes(st_outTPVK.LEVEL);
-                    comTPVK.DATA[3] = byteArray[0];
-                    comTPVK.DATA[4] = byteArray[1];
+                    comTPVK.DATA[3] = byteArray[1];//турки странные люди, у них байты перевернуты
+                    comTPVK.DATA[4] = byteArray[0];
 
                     byteArray = BitConverter.GetBytes(st_outTPVK.GAIN);
-                    comTPVK.DATA[5] = byteArray[0];
-                    comTPVK.DATA[6] = byteArray[1];
+                    comTPVK.DATA[5] = byteArray[1];//турки странные люди, у них байты перевернуты
+                    comTPVK.DATA[6] = byteArray[0];
 
                     comTPVK.DATA[7] = st_outTPVK.EXPOSURE;
-                    comTPVK.DATA[8] = st_outTPVK.FOCUS;
+                    //comTPVK.DATA[8] = st_outTPVK.FOCUS;
+
                     ///////////////////////////////////////////////////
+                    if (st_outTPVK.FOCUS != TPVKFocus_IN)//если устанавливаемое значение не совпадает с принятым - послать серию пакетов 3х
+                    {
+                        TPVKFocusPacketsSeries = true;
+                        TPVKFocusMeditVal = st_outTPVK.FOCUS;//промежуточное значение фокуса при посылке 3х пакетов
+                    }
+                    //послать 3х пакета для FOCUS
+                    if (TPVKFocusPrev != st_outTPVK.FOCUS && !TPVKFocusPacketsSeries)//если изменение фокуса и НЕТ серии пакетов 3х
+                    {
+                        TPVKFocusPacketsSeries = true;
+                        TPVKFocusMeditVal = st_outTPVK.FOCUS;//промежуточное значение фокуса при посылке 3х пакетов                        
+                    }
+                    if (TPVKFocusPrev == st_outTPVK.FOCUS && !TPVKFocusPacketsSeries)//посылка 0 при одинаковых значениях и(или) окончании пакета 3х
+                    {
+                        comTPVK.DATA[8] = 0;
+                    }
+
+                    if (TPVKFocusPacketsSeries)//пакет 3х
+                    {
+                        if (TPVKFocus3Count > 2)
+                        {
+                            TPVKFocusPrev = TPVKFocusMeditVal;
+                            TPVKFocusPacketsSeries = false;
+                            TPVKFocus3Count = 0;
+                        }
+                        else
+                        {
+                            comTPVK.DATA[8] = (byte)TPVKFocusMeditVal;//посылка 3х пакета
+                            TPVKFocus3Count++;
+                        }
+                    }
+                    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                    ///////////////////////////////////////////////////
+                    if (st_outTPVK.ZOOM != TPVKZoom_IN)//если устанавливаемое значение не совпадает с принятым - послать серию пакетов 3х
+                    {
+                        TPVKZoomPacketsSeries = true;
+                        TPVKZoomMeditVal = st_outTPVK.ZOOM;//промежуточное значение зума при посылке 3х пакетов
+                    }
                     //послать 3х пакета для Zoom
                     if (TPVKZoomPrev != st_outTPVK.ZOOM && !TPVKZoomPacketsSeries)//если изменение зума и НЕТ серии пакетов 3х
                     {
@@ -5114,9 +5413,9 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
             if ((bool)radioButtonTPVKModeDejurn.IsChecked)
                 bitArray0.Set(0, false);
             if ((bool)radioButtonTPVKPolarityWhite.IsChecked)
-                bitArray0.Set(1, true);
-            if ((bool)radioButtonTPVKPolarityBlack.IsChecked)
                 bitArray0.Set(1, false);
+            if ((bool)radioButtonTPVKPolarityBlack.IsChecked)
+                bitArray0.Set(1, true);
             if ((bool)radioButtonTPVKContrastAuto.IsChecked)
                 bitArray0.Set(2, true);
             if ((bool)radioButtonTPVKContrastRuch.IsChecked)
@@ -5135,7 +5434,8 @@ labelSendCommand:    buf_chksum_all[0] = comTVK1.START;
             BitArray bitArray3 = new BitArray(8);
             bitArray3.SetAll(false);
 
-
+            bitArray3.Set(0, true);
+            bitArray3.Set(1, true);
             if ((bool)radioButtonTPVKMarkOff.IsChecked)
             {
                 bitArray3.Set(2, false);
